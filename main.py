@@ -185,7 +185,7 @@ class Warehouse(Abstract):
                         print("Nothing happend")
                     elif n_price == float(price.get()):
                         print("here i am")
-                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get()), temp_item)
+                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get()), temp_item, price.get())
                     elif n_price != float(price.get()):
                         print("here i am 2")
                         db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price.get(), amount.get())))
