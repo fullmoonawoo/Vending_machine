@@ -50,8 +50,8 @@ def insert_db(where, titles, what):
     vending_db.commit()
 
 
-def update_db(where, title, result1, what):
-    command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what}'
+def update_db(where, title, result1, what, price):
+    command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what} and cena_s_dph = {price}'
     print(command)
     my_crsr.execute(command)
     vending_db.commit()
