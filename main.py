@@ -167,27 +167,29 @@ class Warehouse(Abstract):
         self.add_button.grid(row=0, column=4, padx=10, pady=20, ipadx=25, sticky="N")
 
     def make_purchase(self):
-        print(self.good_name_cont)
         for idx, item in enumerate(self.good_name_cont):
             temp_item = "'" + item + "'"
+            print(temp_item)
             price, amount, var = self.purchase_cont[idx]
             self.temp = db.refresh_db("*", str(temp_item))
             if item not in self.wh_items:
+                print("Insert")
                 if var.get() == 0:
                     db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price.get()), amount.get())))
                 elif var.get() == 1:
                     self.price_w_ref = float(price.get()) + 0.15
                     db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount.get())))
             elif item in self.wh_items:
+                print("update")
                 for n in self.temp:
                     n_item, n_price, n_amount = n
                     if len(price.get()) == 0 or len(amount.get()) == 0:
                         print("Nothing happend")
                     elif n_price == float(price.get()):
-                        print("here i am")
-                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get()), temp_item, price.get())
+                        print("update with same prices")
+                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get()), temp_item, float(price.get()))
                     elif n_price != float(price.get()):
-                        print("here i am 2")
+                        print("update with different prices")
                         db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price.get(), amount.get())))
 
     def add_goods(self):
