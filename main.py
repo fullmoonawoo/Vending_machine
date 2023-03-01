@@ -104,10 +104,9 @@ class MainWorkspace(Abstract):
         self.workspace.withdraw()
         wh = Warehouse('Warehouse')
         wh.workspace.protocol("WM_DELETE_WINDOW", wh.close_warehouse)
+        wh.refresh_state()
         wh.run_wh()
 
-    def close_warehouse(self):
-        pass
 
     def run(self):
         self.workspace.mainloop()
@@ -141,6 +140,7 @@ class Warehouse(Abstract):
         self.price_w_ref = 0
 
         self.wh_items = set()
+        self.wh_result = []
         self.good_name_cont = []
         self.purchase_cont = []
         self.refundable_vars = []
@@ -154,8 +154,10 @@ class Warehouse(Abstract):
         self.temp = 0
         self.new_good = None
 
+
         #for y in self.wh_table.get_children():
             #self.wh_table.delete(y)
+    def refresh_state(self):
         self.wh_result = db.refresh_db("*")
         for x in self.wh_result:
             item, price, amount = x
@@ -196,6 +198,7 @@ class Warehouse(Abstract):
         self.wh_result = db.refresh_db("tovar")
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
         self.new_purchase.geometry("800x800")
+        self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
         self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 11", fg="white", bg="gray26")
         self.good_label.grid(row=0, column=0, padx=10, pady=4)
         self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 11", fg="white", bg="gray26")
@@ -240,6 +243,10 @@ class Warehouse(Abstract):
             self.row_counter += 1
             self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
             self.plus_row.grid(row=self.row_counter + 1, column=0)
+
+    def close_toplevel(self):
+        self.new_purchase.destroy()
+        self.refresh_state()
 
     def close_warehouse(self):
         self.workspace.destroy()
