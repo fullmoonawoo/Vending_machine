@@ -107,7 +107,6 @@ class MainWorkspace(Abstract):
         wh.refresh_state()
         wh.run_wh()
 
-
     def run(self):
         self.workspace.mainloop()
 
@@ -154,9 +153,6 @@ class Warehouse(Abstract):
         self.temp = 0
         self.new_good = None
 
-
-        #for y in self.wh_table.get_children():
-            #self.wh_table.delete(y)
     def refresh_state(self):
         self.wh_result = db.refresh_db("*")
         for x in self.wh_result:
