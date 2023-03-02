@@ -174,22 +174,22 @@ class Warehouse(Abstract):
             if item not in self.wh_items:
                 print("Insert")
                 if var.get() == 0:
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price.get()), amount.get())))
+                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price.get().replace(",", ".")), amount.get().replace(",", "."))))
                 elif var.get() == 1:
-                    self.price_w_ref = float(price.get()) + 0.15
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount.get())))
+                    self.price_w_ref = float(price.get().replace(",", ".")) + 0.15
+                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount.get().replace(",", "."))))
             elif item in self.wh_items:
                 print("update")
                 for n in self.temp:
                     n_item, n_price, n_amount = n
-                    if len(price.get()) == 0 or len(amount.get()) == 0:
+                    if len(price.get().replace(",", ".")) == 0 or len(amount.get().replace(",", ".")) == 0:
                         print("Nothing happend")
-                    elif n_price == float(price.get()):
+                    elif n_price == float(price.get().replace(",", ".")):
                         print("update with same prices")
-                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get()), temp_item, float(price.get()))
-                    elif n_price != float(price.get()):
+                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get().replace(",", ".")), temp_item, float(price.get().replace(",", ".")))
+                    elif n_price != float(price.get().replace(",", ".")):
                         print("update with different prices")
-                        db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price.get(), amount.get())))
+                        db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price.get().replace(",", "."), amount.get().replace(",", "."))))
 
     def add_goods(self):
         self.wh_result = db.refresh_db("tovar")
