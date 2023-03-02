@@ -62,11 +62,12 @@ class MainWorkspace(Abstract):
         # Inside functions
         self.time_refresh()
 
-        # Containers
+        # Vending machines - container
+        self.new_name = None
+        self.machine_label = None
         self.machine_container = []
 
-        # Warehouse
-
+        # Vending machines
     def add_machine(self):
         self.new_name = simpledialog.askstring("Nový automat", "Zadaj názov automatu: ")
         if self.new_name:
@@ -130,6 +131,10 @@ class Warehouse(Abstract):
         self.wh_table.column('c3', anchor="center", width=200)
         self.wh_table.heading('c3', text="Počet kusov:",)
 
+        # Buttons
+        self.add_button = tk.Button(self.wh_workspace, text='Nový nákup', command=self.add_goods, font="Arial 12 bold", bg="gray26", fg="white")
+        self.add_button.grid(row=0, column=4, padx=10, pady=20, ipadx=25, sticky="N")
+
         # Autoload
         self.new_purchase = None
         self.good_label = None
@@ -159,10 +164,6 @@ class Warehouse(Abstract):
             item, price, amount = x
             self.wh_table.insert('', 'end', values=(str(item), str(price), str(amount)))
             self.wh_items.add(str(x[0]))
-
-        # Buttons
-        self.add_button = tk.Button(self.wh_workspace, text='Nový nákup', command=self.add_goods, font="Arial 12 bold", bg="gray26", fg="white")
-        self.add_button.grid(row=0, column=4, padx=10, pady=20, ipadx=25, sticky="N")
 
     def make_purchase(self):
         for idx, item in enumerate(self.good_name_cont):

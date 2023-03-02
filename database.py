@@ -31,6 +31,11 @@ vending_db = mysql.connect(
 my_crsr = vending_db.cursor()
 
 
+def create_table(machine):
+    command = f'CREATE TABLE {machine} (tovar VARCHAR(20), pred.cena float(4), pocet_kusov int)'
+    my_crsr.execute(command)
+
+
 def refresh_db(parameter, item=None):
     if parameter and item:
         command = f'SELECT {parameter} FROM vending_db.sklad WHERE tovar = {item}'
