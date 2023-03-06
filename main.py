@@ -71,12 +71,18 @@ class MainWorkspace(Abstract):
     def unpacking_dat(self):
         with open("machine_container.txt", "r") as dat_machines:
             for machine in dat_machines.read().split("**"):
-                self.machine_container.append(machine)
+                if machine == "":
+                    pass
+                else:
+                    self.machine_container.append(machine)
             return self.machine_container
 
     def packing_dat(self):
         with open("machine_container.txt", "w") as dat_machines:
-            dat_machines.write("**".join(self.machine_container))
+            print(dat_machines)
+            for machine in self.machine_container:
+                machine = machine + "**"
+                dat_machines.write(machine)
 
         # Vending machines
 
@@ -102,6 +108,7 @@ class MainWorkspace(Abstract):
             else:
                 self.plus = tk.Button(self.vending_area, text="+", command=self.add_machine, font="aerial 20", bg="gray26", fg="white")
                 self.plus.grid(row=self.ver_mover, column=self.hor_mover, pady=40, ipady=4, padx=40, ipadx=4, rowspan=2)
+        return self.machine_container
 
     def date_refresh(self):
         self.date = strftime('%d-%B-%Y')
@@ -115,9 +122,26 @@ class MainWorkspace(Abstract):
         if self.time >= strftime("00:00:00"):
             self.date_refresh()
 
-    def initial_state(self):
-        for machine in self.machine_container:
-            pass
+    def initiate_base_state(self):
+        print(self.machine_container, len(self.machine_container))
+        if len(self.machine_container) != 0:
+            for machine in self.machine_container:
+                self.plus.destroy()
+                self.machine_label = tk.Label(self.vending_area, text=machine, font="Aerial 14 bold", bg="gray22", fg="white")
+                self.machine_label.grid(row=self.ver_mover, column=self.hor_mover, padx=2, pady=20)
+                self.vending_machine = tk.Button(self.vending_area, image=self.logo)
+                self.vending_machine.grid(row=self.ver_mover + 1, column=self.hor_mover, padx=90)
+                self.hor_mover += 1
+                if self.hor_mover == 4:
+                    self.hor_mover = 0
+                    self.ver_mover += 2
+                    self.plus = tk.Button(self.vending_area, text="+", command=self.add_machine, font="aerial 20", bg="gray26", fg="white")
+                    self.plus.grid(row=self.ver_mover, column=self.hor_mover, pady=40, ipady=4, padx=40, ipadx=4, rowspan=2)
+                elif self.hor_mover == 4 and self.ver_mover == 4:
+                    self.plus.destroy()
+                else:
+                    self.plus = tk.Button(self.vending_area, text="+", command=self.add_machine, font="aerial 20", bg="gray26", fg="white")
+                    self.plus.grid(row=self.ver_mover, column=self.hor_mover, pady=40, ipady=4, padx=40, ipadx=4, rowspan=2)
 
     def open_warehouse(self):
         self.workspace.withdraw()
@@ -300,4 +324,5 @@ class VendingMachine(Abstract):
 if __name__ == "__main__":
     gui = MainWorkspace('Vending Machine')
     gui.unpacking_dat()
+    gui.initiate_base_state()
     gui.run()
