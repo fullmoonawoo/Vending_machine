@@ -32,8 +32,15 @@ my_crsr = vending_db.cursor()
 
 
 def create_table(machine):
-    command = f'CREATE TABLE {machine} (tovar VARCHAR(20), pred.cena float(4), pocet_kusov int)'
+    command = f'CREATE TABLE {str(machine)} (tovar VARCHAR(20), predajna_cena FLOAT(4), pocet_kusov INT)'
     my_crsr.execute(command)
+
+
+def make_sum():
+    command = 'SELECT SUM(cena_s_dph * pocet_kusov) FROM vending_db.sklad'
+    my_crsr.execute(command)
+    summa = my_crsr.fetchall()
+    return summa
 
 
 def refresh_db(parameter, item=None):

@@ -40,7 +40,7 @@ class MainWorkspace(Abstract):
         self.header.columnconfigure(4, weight=1)
         self.title_label = tk.Label(self.header, text="VENDING MACHINE", font="Arial 20 bold", bg="gray12", fg=self.main_color)
         self.title_label.grid(row=0, column=0, columnspan=3, ipadx=460, padx=4, ipady=20, sticky="NSWE")
-        self.store_button = tk.Button(self.header, text="SKLAD", command=self.open_warehouse, font="Arial 15 bold", bg="gray26", fg="green3")
+        self.store_button = tk.Button(self.header, text="Sklad", command=self.open_warehouse, font="Arial 15 bold", bg="gray26", fg="green3")
         self.store_button.grid(row=1, column=1, sticky="EW", ipadx=200)
         self.time_label = tk.Label(self.header, text=self.time, font=("Arial", 17), bg="gray12", fg=self.main_color)
         self.time_label.grid(row=1, column=0, ipadx=40, padx=4, ipady=15, sticky="W")
@@ -67,7 +67,19 @@ class MainWorkspace(Abstract):
         self.machine_label = None
         self.machine_container = []
 
+        # Load containers
+    def unpacking_dat(self):
+        with open("machine_container.txt", "r") as dat_machines:
+            for machine in dat_machines.read().split("**"):
+                self.machine_container.append(machine)
+            return self.machine_container
+
+    def packing_dat(self):
+        with open("machine_container.txt", "w") as dat_machines:
+            dat_machines.write("**".join(self.machine_container))
+
         # Vending machines
+
     def add_machine(self):
         self.new_name = simpledialog.askstring("Nový automat", "Zadaj názov automatu: ")
         if self.new_name:
@@ -76,7 +88,9 @@ class MainWorkspace(Abstract):
             self.machine_label.grid(row=self.ver_mover, column=self.hor_mover, padx=2, pady=20)
             self.vending_machine = tk.Button(self.vending_area, image=self.logo)
             self.vending_machine.grid(row=self.ver_mover+1, column=self.hor_mover, padx=90)
-            self.machine_container.append(self.vending_machine)
+            self.machine_container.append(self.machine_label.cget("text"))
+            db.create_table(self.new_name)
+            self.packing_dat()
             self.hor_mover += 1
             if self.hor_mover == 4:
                 self.hor_mover = 0
@@ -101,6 +115,10 @@ class MainWorkspace(Abstract):
         if self.time >= strftime("00:00:00"):
             self.date_refresh()
 
+    def initial_state(self):
+        for machine in self.machine_container:
+            pass
+
     def open_warehouse(self):
         self.workspace.withdraw()
         wh = Warehouse('Warehouse')
@@ -116,13 +134,15 @@ class Warehouse(Abstract):
     def __init__(self, name):
         super().__init__(name)
         self.workspace.configure(bg="gray22")
-        self.workspace.geometry("800x900")
+        self.workspace.geometry("990x900")
+        self.width = 990
+        self.height = 900
         self.wh_workspace = tk.Frame(self.workspace, bg="gray26", height=self.height, width=self.width)
         self.wh_workspace.grid(row=0, column=0, sticky="NSWE")
-        self.wh_workspace.rowconfigure(4, weight=1)
-        self.wh_workspace.columnconfigure(4, weight=1)
+        self.wh_workspace.rowconfigure(10, weight=1)
+        self.wh_workspace.columnconfigure(8, weight=1)
         self.wh_table = ttk.Treeview(self.wh_workspace, show="headings", columns=('c1', 'c2', 'c3'), height=43)
-        self.wh_table.grid(row=0, column=0, columnspan=3, pady=10, padx=10, sticky="NW")
+        self.wh_table.grid(row=0, column=0, columnspan=3, rowspan=20, pady=10, padx=10, sticky="NW")
 
         self.wh_table.column('c1', anchor="center", width=200)
         self.wh_table.heading('c1', text="Tovar:")
@@ -130,10 +150,17 @@ class Warehouse(Abstract):
         self.wh_table.heading('c2', text="Cena s DPH:")
         self.wh_table.column('c3', anchor="center", width=200)
         self.wh_table.heading('c3', text="Počet kusov:",)
+        self.wh_worth = 0
 
         # Buttons
+        self.wh_state_label = tk.Label(self.wh_workspace, text="Hodnota skladu: ", font="Arial 15 bold", bg="gray26", fg="white")
+        self.wh_state_label.grid(row=0, column=4, padx=10, pady=20, ipadx=20, sticky="N")
+        self.wh_state = tk.Label(self.wh_workspace, text=self.wh_worth, font="Arial 15 bold", bg="gray26", fg="white")
+        self.wh_state.grid(row=0, column=5, padx=10, pady=20, ipadx=20, sticky="N")
         self.add_button = tk.Button(self.wh_workspace, text='Nový nákup', command=self.add_goods, font="Arial 12 bold", bg="gray26", fg="white")
-        self.add_button.grid(row=0, column=4, padx=10, pady=20, ipadx=25, sticky="N")
+        self.add_button.grid(row=1, column=4, columnspan=2, padx=10, pady=4, ipadx=100, sticky="NEW")
+        self.add_button = tk.Button(self.wh_workspace, text='Znížiť stav', font="Arial 12 bold", bg="gray26", fg="white")
+        self.add_button.grid(row=2, column=4, columnspan=2, padx=10, pady=4, ipadx=100, sticky="NEW")
 
         # Autoload
         self.new_purchase = None
@@ -158,7 +185,19 @@ class Warehouse(Abstract):
         self.temp = 0
         self.new_good = None
 
+    @staticmethod
+    def transform_str(string):
+        return string.replace(",", ".")
+
+    def calculate_wh(self):
+        self.wh_worth = db.make_sum()[0][0]
+        print(self.wh_worth, "Here")
+        self.wh_state.config(text=str(round(self.wh_worth, 2)) + " €")
+
     def refresh_state(self):
+        self.calculate_wh()
+        for y in self.wh_table.get_children():
+            self.wh_table.delete(y)
         self.wh_result = db.refresh_db("*")
         for x in self.wh_result:
             item, price, amount = x
@@ -204,7 +243,7 @@ class Warehouse(Abstract):
         self.amount_label.grid(row=0, column=2, padx=10, pady=4)
         self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 11", fg="white", bg="gray26")
         self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
-        tk.Button(self.new_purchase, text="Import new goods", command=self.make_purchase).grid(row=1, column=4, columnspan=3)
+        tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=3, sticky="WE")
         for idx, tovar in enumerate(set(self.wh_result)):
             self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 10", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
@@ -227,7 +266,6 @@ class Warehouse(Abstract):
             self.plus_row.destroy()
             self.name_of_good = tk.Label(self.new_purchase, text=self.new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
             self.name_of_good.grid(row=self.row_counter + 1, column=0, pady=8, padx=2)
-            print(self.name_of_good.cget('text'), "I am text")
             self.good_name_cont.append(self.name_of_good.cget('text'))
             self.price_entry = tk.Entry(self.new_purchase, width=8)
             self.price_entry.grid(row=self.row_counter + 1, column=1)
@@ -254,9 +292,12 @@ class Warehouse(Abstract):
 
 
 class VendingMachine(Abstract):
-    pass
+    def __init__(self, name, database):
+        super().__init__(name)
+        self.database = database
 
 
 if __name__ == "__main__":
     gui = MainWorkspace('Vending Machine')
+    gui.unpacking_dat()
     gui.run()
