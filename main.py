@@ -150,6 +150,10 @@ class MainWorkspace(Abstract):
         wh.refresh_state()
         wh.run_wh()
 
+    def open_machine(self, machine_name):
+        machine_name = VendingMachine(machine_name)
+        machine_name.run_machine()
+
     def run(self):
         self.workspace.mainloop()
 
@@ -316,9 +320,11 @@ class Warehouse(Abstract):
 
 
 class VendingMachine(Abstract):
-    def __init__(self, name, database):
+    def __init__(self, name):
         super().__init__(name)
-        self.database = database
+
+    def run_machine(self):
+        self.workspace.mainloop()
 
 
 if __name__ == "__main__":
