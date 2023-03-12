@@ -1,7 +1,10 @@
 import tkinter as tk
 from tkinter import ttk
 from tkinter import simpledialog
+from tkcalendar import DateEntry
 from time import strftime
+from functools import partial
+
 # Subfiles
 import database as db
 
@@ -92,7 +95,7 @@ class MainWorkspace(Abstract):
             self.plus.destroy()
             self.machine_label = tk.Label(self.vending_area, text=self.new_name, font="Aerial 14 bold", bg="gray22", fg="white")
             self.machine_label.grid(row=self.ver_mover, column=self.hor_mover, padx=2, pady=20)
-            self.vending_machine = tk.Button(self.vending_area, image=self.logo)
+            self.vending_machine = tk.Button(self.vending_area, image=self.logo, command=partial(self.open_machine, self.new_name))
             self.vending_machine.grid(row=self.ver_mover+1, column=self.hor_mover, padx=90)
             self.machine_container.append(self.machine_label.cget("text"))
             db.create_table(self.new_name)
@@ -127,9 +130,10 @@ class MainWorkspace(Abstract):
         if len(self.machine_container) != 0:
             for machine in self.machine_container:
                 self.plus.destroy()
+                machine = machine
                 self.machine_label = tk.Label(self.vending_area, text=machine, font="Aerial 14 bold", bg="gray22", fg="white")
                 self.machine_label.grid(row=self.ver_mover, column=self.hor_mover, padx=2, pady=20)
-                self.vending_machine = tk.Button(self.vending_area, image=self.logo)
+                self.vending_machine = tk.Button(self.vending_area, image=self.logo, command=partial(self.open_machine, machine))
                 self.vending_machine.grid(row=self.ver_mover + 1, column=self.hor_mover, padx=90)
                 self.hor_mover += 1
                 if self.hor_mover == 4:
@@ -192,6 +196,8 @@ class Warehouse(Abstract):
 
         # Autoload
         self.new_purchase = None
+        self.purchase_date_label = None
+        self.purchase_date = None
         self.good_label = None
         self.price_label = None
         self.refundable_label = None
@@ -235,69 +241,76 @@ class Warehouse(Abstract):
     def make_purchase(self):
         for idx, item in enumerate(self.good_name_cont):
             temp_item = "'" + item + "'"
-            print(temp_item)
             price, amount, var = self.purchase_cont[idx]
+            print(self.transform_str(price.get()))
+            price = self.transform_str(price.get())
+            amount = self.transform_str(amount.get())
+            #db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price.get())), amount.get()))
             self.temp = db.refresh_db("*", str(temp_item))
             if item not in self.wh_items:
                 print("Insert")
                 if var.get() == 0:
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price.get().replace(",", ".")), amount.get().replace(",", "."))))
+                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)))
                 elif var.get() == 1:
-                    self.price_w_ref = float(price.get().replace(",", ".")) + 0.15
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount.get().replace(",", "."))))
+                    self.price_w_ref = float(price) + 0.15
+                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount)))
             elif item in self.wh_items:
                 print("update")
                 for n in self.temp:
                     n_item, n_price, n_amount = n
-                    if len(price.get().replace(",", ".")) == 0 or len(amount.get().replace(",", ".")) == 0:
+                    if len(price) == 0 or len(amount) == 0:
                         print("Nothing happend")
-                    elif n_price == float(price.get().replace(",", ".")):
+                    elif n_price == float(price):
                         print("update with same prices")
-                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount.get().replace(",", ".")), temp_item, float(price.get().replace(",", ".")))
-                    elif n_price != float(price.get().replace(",", ".")):
+                        db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount), temp_item, float(price))
+                    elif n_price != float(price):
                         print("update with different prices")
-                        db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price.get().replace(",", "."), amount.get().replace(",", "."))))
+                        db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price, amount)))
 
     def add_goods(self):
         self.wh_result = db.refresh_db("tovar")
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
         self.new_purchase.geometry("800x800")
         self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
-        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 11", fg="white", bg="gray26")
+        self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 14 bold", bg="gray26", fg="white")
+        self.purchase_date_label.grid(row=0, column=4, padx=10, pady=6)
+        self.purchase_date = DateEntry(self.new_purchase, date_pattern='dd-mm-yyyy')
+        self.purchase_date.grid(row=0, column=5, padx=10, pady=4)
+        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 14", fg="white", bg="gray26")
         self.good_label.grid(row=0, column=0, padx=10, pady=4)
-        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 11", fg="white", bg="gray26")
+        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 14", fg="white", bg="gray26")
         self.price_label.grid(row=0, column=1, padx=10, pady=4)
-        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 11", fg="white", bg="gray26")
+        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 14", fg="white", bg="gray26")
         self.amount_label.grid(row=0, column=2, padx=10, pady=4)
-        self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 11", fg="white", bg="gray26")
+        self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 14", fg="white", bg="gray26")
         self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
-        tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=3, sticky="WE")
+        tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
         for idx, tovar in enumerate(set(self.wh_result)):
-            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 10", bg="gray22", fg="white")
+            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
             self.good_name_cont.append(self.name_of_good.cget('text'))
-            self.price_entry = tk.Entry(self.new_purchase, width=8)
+            self.price_entry = tk.Entry(self.new_purchase, width=10)
             self.price_entry.grid(row=idx + 1, column=1)
-            self.amount_entry = tk.Entry(self.new_purchase, width=8)
+            self.amount_entry = tk.Entry(self.new_purchase, width=10)
             self.amount_entry.grid(row=idx + 1, column=2)
             self.ref_var = tk.IntVar(self.new_purchase, value=0)
             self.refundable_check = tk.Checkbutton(self.new_purchase, variable=self.ref_var, onvalue=1, offvalue=0, bg="gray26")
             self.refundable_check.grid(row=idx + 1, column=3)
             self.purchase_cont.append((self.price_entry, self.amount_entry, self.ref_var))
-            self.row_counter += 1
-        self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
-        self.plus_row.grid(row=self.row_counter + 1, column=0)
+            self.row_counter = idx + 1
+        self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 11", bg="gray22", fg="white")
+        self.plus_row.grid(row=self.row_counter + 2, column=0)
 
     def add_new_good(self):
         self.new_good = simpledialog.askstring("Nový tovar", "Zadaj názov tovaru: ")
         if self.new_good:
             self.plus_row.destroy()
-            self.name_of_good = tk.Label(self.new_purchase, text=self.new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
+            self.name_of_good = tk.Label(self.new_purchase, text=self.new_good, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=self.row_counter + 1, column=0, pady=8, padx=2)
             self.good_name_cont.append(self.name_of_good.cget('text'))
-            self.price_entry = tk.Entry(self.new_purchase, width=8)
+            self.price_entry = tk.Entry(self.new_purchase, width=10)
             self.price_entry.grid(row=self.row_counter + 1, column=1)
-            self.amount_entry = tk.Entry(self.new_purchase, width=8)
+            self.amount_entry = tk.Entry(self.new_purchase, width=10)
             self.amount_entry.grid(row=self.row_counter + 1, column=2)
             self.ref_var = tk.IntVar(self.new_purchase, value=0)
             self.refundable_check = tk.Checkbutton(self.new_purchase, variable=self.ref_var, onvalue=1, offvalue=0, bg="gray26")
@@ -322,6 +335,7 @@ class Warehouse(Abstract):
 class VendingMachine(Abstract):
     def __init__(self, name):
         super().__init__(name)
+        print(name)
 
     def run_machine(self):
         self.workspace.mainloop()
