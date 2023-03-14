@@ -338,6 +338,9 @@ class Warehouse(Abstract):
             self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
             self.plus_row.grid(row=self.row_counter + 1, column=0)
 
+    def remove_wh_good(self):
+        pass
+
     def remove_goods(self):
         self.wh_result = db.refresh_db("tovar")
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
