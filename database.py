@@ -58,7 +58,6 @@ def refresh_db(parameter, item=None):
 
 def insert_db(where, titles, what):
     command = f'INSERT INTO {where} {titles} VALUES {what}'
-    print(command)
     my_crsr.execute(command)
     vending_db.commit()
 
