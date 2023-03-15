@@ -240,6 +240,10 @@ class Warehouse(Abstract):
             self.wh_table.insert('', 'end', values=(str(item), str(price), str(amount)))
             self.wh_items.add(str(x[0]))
 
+    def clean_and_load(self):
+        self.good_name_cont = []
+        self.purchase_cont = []
+
     def make_purchase(self):
         for idx, item in enumerate(self.good_name_cont):
             price, amount, var = self.purchase_cont[idx]
@@ -257,7 +261,6 @@ class Warehouse(Abstract):
                 db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(self.price_w_ref), amount)))
 
     def add_goods(self):
-        self.wh_result = db.refresh_db("tovar")
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
         self.new_purchase.geometry("800x800")
         self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
@@ -274,6 +277,7 @@ class Warehouse(Abstract):
         self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 14", fg="white", bg="gray26")
         self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
         tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
+        self.wh_result = db.refresh_db("tovar")
         for idx, tovar in enumerate(set(self.wh_result)):
             self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
@@ -345,6 +349,7 @@ class Warehouse(Abstract):
             self.row_counter = idx + 1
 
     def close_toplevel(self):
+        self.clean_and_load()
         self.new_purchase.destroy()
         self.refresh_state()
 
