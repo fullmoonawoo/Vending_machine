@@ -249,11 +249,11 @@ class Warehouse(Abstract):
             if len(price) == 0 or len(amount) == 0:
                 print("Nothing happend")
             elif var == 0:
-                db.insert_db2("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
+                db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
                 db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
             elif var == 1:
                 self.price_w_ref = float(price) + 0.15
-                db.insert_db2("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(self.price_w_ref), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
+                db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(self.price_w_ref), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
                 db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(self.price_w_ref), amount)))
 
     def add_goods(self):

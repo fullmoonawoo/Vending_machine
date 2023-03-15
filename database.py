@@ -56,16 +56,15 @@ def refresh_db(parameter, item=None):
         return db_results
 
 
-def insert_db(where, titles, what):
-    command = f'INSERT INTO {where} {titles} VALUES {what}'
-    my_crsr.execute(command)
-    vending_db.commit()
-
-
-def insert_db2(where, titles, what, col_for_update):
-    command = f'INSERT INTO {where} {titles} VALUES {what} ON DUPLICATE KEY UPDATE {col_for_update}'
-    my_crsr.execute(command)
-    vending_db.commit()
+def insert_db(where, titles, what, col_for_update=None):
+    if where and col_for_update:
+        command = f'INSERT INTO {where} {titles} VALUES {what} ON DUPLICATE KEY UPDATE {col_for_update}'
+        my_crsr.execute(command)
+        vending_db.commit()
+    else:
+        command = f'INSERT INTO {where} {titles} VALUES {what}'
+        my_crsr.execute(command)
+        vending_db.commit()
 
 
 def update_db(where, title, result1, what, price):
