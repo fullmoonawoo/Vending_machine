@@ -242,7 +242,6 @@ class Warehouse(Abstract):
 
     def make_purchase(self):
         for idx, item in enumerate(self.good_name_cont):
-            temp_item = "'" + item + "'"
             price, amount, var = self.purchase_cont[idx]
             price = self.transform_str(price.get())
             amount = self.transform_str(amount.get())
@@ -250,40 +249,12 @@ class Warehouse(Abstract):
             if len(price) == 0 or len(amount) == 0:
                 print("Nothing happend")
             elif var == 0:
-                if item not in self.wh_items:
-                    print("Insert as simple")
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)))
-                    db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
-                elif item in self.wh_items:
-                    self.temp = db.refresh_db("*", str(temp_item))
-                    for n in self.temp:
-                        n_item, n_price, n_amount = n
-                        if n_price == float(price):
-                            print("update with same prices as simple")
-                            db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount), temp_item, float(price))
-                            db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
-                        elif n_price != float(price):
-                            print("update with different prices as simple")
-                            db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, price, amount)))
-                            db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
+                db.insert_db2("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
+                db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
             elif var == 1:
                 self.price_w_ref = float(price) + 0.15
-                if item not in self.wh_items:
-                    print("Insert as refundable")
-                    db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount)))
-                    db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, self.price_w_ref, amount)))
-                elif item in self.wh_items:
-                    self.temp = db.refresh_db("*", str(temp_item))
-                    for n in self.temp:
-                        n_item, n_price, n_amount = n
-                        if n_price == self.price_w_ref:
-                            print("update with same prices as refundable")
-                            db.update_db("vending_db.sklad", "pocet_kusov", n_amount + int(amount), temp_item, self.price_w_ref)
-                            db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, self.price_w_ref, amount)))
-                        elif n_price != self.price_w_ref:
-                            print("update with different prices as refundable")
-                            db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, self.price_w_ref, amount)))
-                            db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, self.price_w_ref, amount)))
+                db.insert_db2("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(self.price_w_ref), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
+                db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(self.price_w_ref), amount)))
 
     def add_goods(self):
         self.wh_result = db.refresh_db("tovar")

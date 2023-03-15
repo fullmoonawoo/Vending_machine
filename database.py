@@ -62,6 +62,12 @@ def insert_db(where, titles, what):
     vending_db.commit()
 
 
+def insert_db2(where, titles, what, col_for_update):
+    command = f'INSERT INTO {where} {titles} VALUES {what} ON DUPLICATE KEY UPDATE {col_for_update}'
+    my_crsr.execute(command)
+    vending_db.commit()
+
+
 def update_db(where, title, result1, what, price):
     command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what} and cena_s_dph between {price - 0.01} and {price + 0.01}'
     my_crsr.execute(command)
