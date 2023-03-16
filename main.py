@@ -328,6 +328,7 @@ class Warehouse(Abstract):
             else:
                 db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)), "pocet_kusov = pocet_kusov - " + str(change))
                 #db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
+            db.remove_from_db('vending_db.sklad', 'pocet_kusov = 0')
 
     def remove_goods(self):
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")

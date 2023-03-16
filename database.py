@@ -73,5 +73,10 @@ def update_db(where, title, result1, what, price):
     vending_db.commit()
 
 
+def remove_from_db(where, what):
+    command = f'DELETE FROM {where} WHERE {what}'
+    my_crsr.execute(command)
+    vending_db.commit()
+
 def say_hello():
     print("Hello meeeen !")
