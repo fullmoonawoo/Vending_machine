@@ -154,7 +154,8 @@ class MainWorkspace(Abstract):
         wh.refresh_state()
         wh.run_wh()
 
-    def open_machine(self, machine_name):
+    @staticmethod
+    def open_machine(machine_name):
         machine_name = VendingMachine(machine_name)
         machine_name.run_machine()
 
@@ -212,6 +213,10 @@ class Warehouse(Abstract):
         self.name_of_good = None
         self.price_entry = None
         self.refundable_check = None
+        self.price_lab = None
+        self.amount_lab = None
+        self.for_reducing = None
+        self.reduced = None
         self.amount_entry = None
         self.ref_var = tk.IntVar(self.new_purchase, value=0)
         self.row_counter = 0
@@ -259,6 +264,7 @@ class Warehouse(Abstract):
                 self.price_w_ref = float(price) + 0.15
                 db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(self.price_w_ref), amount)), "pocet_kusov = pocet_kusov + " + str(amount))
                 db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(self.price_w_ref), amount)))
+        self.close_toplevel()
 
     def add_goods(self):
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
@@ -314,13 +320,21 @@ class Warehouse(Abstract):
             self.plus_row.grid(row=self.row_counter + 1, column=0)
 
     def remove_wh_good(self):
-        pass
+        for x in self.purchase_cont:
+            item, price, amount, change = x
+            change = change.get()
+            if len(change) == 0:
+                print("Nothing happend")
+            else:
+                db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((item, float(price), amount)), "pocet_kusov = pocet_kusov - " + str(change))
+                #db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), item, float(price), amount)))
 
     def remove_goods(self):
-        self.wh_result = db.refresh_db("tovar")
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
-        self.new_purchase.geometry("800x800")
+        self.new_purchase.geometry("800x1000")
         self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
+        #self.scrollbar = tk.Scrollbar(self.new_purchase)
+        #self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 14 bold", bg="gray26", fg="white")
         self.purchase_date_label.grid(row=0, column=4, padx=10, pady=6)
         self.purchase_date = DateEntry(self.new_purchase, date_pattern='dd-mm-yyyy')
@@ -331,21 +345,21 @@ class Warehouse(Abstract):
         self.price_label.grid(row=0, column=1, padx=10, pady=4)
         self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 14", fg="white", bg="gray26")
         self.amount_label.grid(row=0, column=2, padx=10, pady=4)
-        self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 14", fg="white", bg="gray26")
-        self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
-        tk.Button(self.new_purchase, text="Odpočítať", font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
-        for idx, tovar in enumerate(set(self.wh_result)):
+        self.reduced = tk.Label(self.new_purchase, text="Odpočítať", font="Arial 14", fg="white", bg="gray26")
+        self.reduced.grid(row=0, column=3, padx=10, pady=4)
+        tk.Button(self.new_purchase, text="Odpočítať", command=self.remove_wh_good, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
+        self.wh_result = db.refresh_db("*")
+        for idx, x in enumerate(set(self.wh_result)):
+            tovar, cena, mnozstvo = x
             self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
-            self.good_name_cont.append(self.name_of_good.cget('text'))
-            self.price_entry = tk.Entry(self.new_purchase, width=10)
-            self.price_entry.grid(row=idx + 1, column=1)
-            self.amount_entry = tk.Entry(self.new_purchase, width=10)
-            self.amount_entry.grid(row=idx + 1, column=2)
-            self.ref_var = tk.IntVar(self.new_purchase, value=0)
-            self.refundable_check = tk.Checkbutton(self.new_purchase, variable=self.ref_var, onvalue=1, offvalue=0, bg="gray26")
-            self.refundable_check.grid(row=idx + 1, column=3)
-            self.purchase_cont.append((self.price_entry, self.amount_entry, self.ref_var))
+            self.price_lab = tk.Label(self.new_purchase, text=cena, width=10)
+            self.price_lab.grid(row=idx + 1, column=1)
+            self.amount_lab = tk.Label(self.new_purchase, text=mnozstvo, width=10)
+            self.amount_lab.grid(row=idx + 1, column=2)
+            self.for_reducing = tk.Entry(self.new_purchase, width=10)
+            self.for_reducing.grid(row=idx + 1, column=3)
+            self.purchase_cont.append((tovar, self.price_lab.cget('text'), self.amount_lab.cget('text'), self.for_reducing))
             self.row_counter = idx + 1
 
     def close_toplevel(self):
