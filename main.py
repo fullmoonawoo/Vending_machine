@@ -4,9 +4,28 @@ from tkinter import simpledialog
 from tkcalendar import DateEntry
 from time import strftime
 from functools import partial
+from collections import deque
 
 # Subfiles
 import database as db
+
+# Queue
+
+
+def enqueue(queue, value):
+    queue.append(value)
+
+
+def dequeue(queue):
+    queue.popleft()
+
+
+def front(queue):
+    return queue[0]
+
+
+def empty_queue(queue):
+    return len(queue) == 0
 
 # Frontend
 
@@ -98,7 +117,8 @@ class MainWorkspace(Abstract):
             self.vending_machine = tk.Button(self.vending_area, image=self.logo, command=partial(self.open_machine, self.new_name))
             self.vending_machine.grid(row=self.ver_mover+1, column=self.hor_mover, padx=90)
             self.machine_container.append(self.machine_label.cget("text"))
-            db.create_table(self.new_name)
+            db.create_table(self.new_name, "(tovar VARCHAR(20), cena_s_dph FLOAT(4), predajna_cena FLOAT(4), pocet_kusov INT)")
+            db.create_table(self.new_name + "_predaje", "(datum DATE, tovar VARCHAR(20), cena_s_dph FLOAT(4), predajna_cena FLOAT(4), pocet_kusov INT)")
             self.packing_dat()
             self.hor_mover += 1
             if self.hor_mover == 4:
@@ -157,6 +177,7 @@ class MainWorkspace(Abstract):
     @staticmethod
     def open_machine(machine_name):
         machine_name = VendingMachine(machine_name)
+        machine_name.initiate_machine_state()
         machine_name.run_machine()
 
     def run(self):
@@ -206,7 +227,7 @@ class Warehouse(Abstract):
         self.price_w_ref = 0
 
         self.wh_items = set()
-        self.wh_result = []
+        self.wh_stocks = []
         self.good_name_cont = []
         self.purchase_cont = []
         self.refundable_vars = []
@@ -239,8 +260,8 @@ class Warehouse(Abstract):
         self.calculate_wh()
         for y in self.wh_table.get_children():
             self.wh_table.delete(y)
-        self.wh_result = db.refresh_db("*")
-        for x in self.wh_result:
+        self.wh_stocks = db.refresh_db("*", "vending_db.sklad")
+        for x in self.wh_stocks:
             item, price, amount = x
             self.wh_table.insert('', 'end', values=(str(item), str(price), str(amount)))
             self.wh_items.add(str(x[0]))
@@ -283,8 +304,8 @@ class Warehouse(Abstract):
         self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 14", fg="white", bg="gray26")
         self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
         tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
-        self.wh_result = db.refresh_db("tovar")
-        for idx, tovar in enumerate(set(self.wh_result)):
+        self.wh_stocks = db.refresh_db("tovar", "vending_db.sklad")
+        for idx, tovar in enumerate(set(self.wh_stocks)):
             self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
             self.good_name_cont.append(self.name_of_good.cget('text'))
@@ -349,8 +370,8 @@ class Warehouse(Abstract):
         self.reduced = tk.Label(self.new_purchase, text="Odpočítať", font="Arial 14", fg="white", bg="gray26")
         self.reduced.grid(row=0, column=3, padx=10, pady=4)
         tk.Button(self.new_purchase, text="Odpočítať", command=self.remove_wh_good, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
-        self.wh_result = db.refresh_db("*")
-        for idx, x in enumerate(set(self.wh_result)):
+        self.wh_stocks = db.refresh_db("*", "vending_db.sklad")
+        for idx, x in enumerate(set(self.wh_stocks)):
             tovar, cena, mnozstvo = x
             self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
             self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
@@ -379,7 +400,67 @@ class Warehouse(Abstract):
 class VendingMachine(Abstract):
     def __init__(self, name):
         super().__init__(name)
-        print(name)
+        self.machine = name
+        self.main_color = "green2"
+        self.machine_header = tk.Frame(self.workspace, width=self.width - 28, height=self.height / 8, bg="gray12")
+        self.machine_header.grid(row=0, column=0)
+        self.title_lab = tk.Label(self.machine_header, text=name, font="Arial 20 bold", bg="gray12", fg=self.main_color, width=10)
+        self.title_lab.grid(row=0, column=0, ipady=10)
+        self.machine_worth_lab = tk.Label(self.machine_header, text='Hodnota v automate: ', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=60, anchor='e')
+        self.machine_worth_lab.grid(row=0, column=1, ipady=12.5, ipadx=10)
+        self.worth_lab = tk.Label(self.machine_header, text='135 €', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=13)
+        self.worth_lab.grid(row=0, column=2)
+        self.machine_frame = tk.Frame(self.workspace, width=1000, height=748, bg="gray22")
+        self.machine_frame.grid(row=1, column=0, pady=2, padx=2, sticky="NSWE")
+        self.machine_item = tk.Label(self.machine_frame, text="Tovar", font="Arial 14", fg="white", bg="gray22")
+        self.machine_item.grid(row=0, column=0, padx=10, pady=4)
+        self.machine_price = tk.Label(self.machine_frame, text="Pred.cena", font="Arial 14", fg="white", bg="gray22")
+        self.machine_price.grid(row=0, column=1, padx=10, pady=4)
+        self.machine_amount = tk.Label(self.machine_frame, text="Počet kusov", font="Arial 14", fg="white", bg="gray22")
+        self.machine_amount.grid(row=0, column=2, padx=10, pady=4)
+        self.machine_workspace = tk.Frame(self.workspace, width=self.width - 28, height=self.height / 8, bg="gray2")
+        self.machine_workspace.grid(row=2, column=0, pady=2, padx=2, sticky="NSWE")
+        print("vending_db." + name)
+
+        # Autoload
+        self.machine_good = None
+        self.machine_price = None
+        self.machine_amount = None
+        self.name_of_goods = []
+        self.machine_content = []
+        self.wh_stocks = []
+        self.wh = {}
+        self.wh_stack = self.load_warehouse()
+
+    def initiate_machine_state(self):
+        self.machine_content = db.refresh_db("*", "vending_db." + self.machine)
+        if len(self.machine_content) == 0:
+            self.machine_content = set(db.refresh_db("tovar", "vending_db.sklad"))
+            print(self.machine_content, "CONT")
+            for idx, item in enumerate(set(self.machine_content)):
+                good = item
+                self.machine_good = tk.Label(self.machine_workspace, text=good, anchor="w", font="Arial 11", bg="gray2", fg="white")
+                self.machine_good.grid(row=idx + 2, column=0, padx=10, pady=4)
+                self.machine_price = tk.Label(self.machine_workspace, text="0", anchor="w", font="Arial 11", bg="gray2", fg="white")
+                self.machine_price.grid(row=idx + 2, column=1, padx=10, pady=4)
+                self.machine_amount = tk.Label(self.machine_workspace, text="0", anchor="w", font="Arial 11", bg="gray2", fg="white")
+                self.machine_amount.grid(row=idx + 2, column=2, padx=10, pady=4)
+
+    def load_warehouse(self):
+        self.wh_stocks = db.refresh_db("*", 'vending_db.sklad')
+        for x in self.wh_stocks:
+            good, cost, amount = x
+            if good not in self.wh.keys():
+                self.wh[good] = deque()
+                enqueue(self.wh[good], [cost, amount])
+            elif good in self.wh.keys():
+                for y in range(len(self.wh[good])):
+                    if self.wh[good][y][0] == cost:
+                        self.wh[good][y][1] += amount
+                        break
+                    else:
+                        enqueue(self.wh[good], [cost, amount])
+        return self.wh
 
     def run_machine(self):
         self.workspace.mainloop()

@@ -1,24 +1,4 @@
 import mysql.connector as mysql
-#from collections import deque
-#from datetime import *
-#from time import strftime
-
-
-# Queue
-def enqueue(queue, value):
-    queue.append(value)
-
-
-def dequeue(queue):
-    queue.popleft()
-
-
-def front(queue):
-    return queue[0]
-
-
-def empty_queue(queue):
-    return len(queue) == 0
 
 
 vending_db = mysql.connect(
@@ -31,8 +11,8 @@ vending_db = mysql.connect(
 my_crsr = vending_db.cursor()
 
 
-def create_table(machine):
-    command = f'CREATE TABLE {str(machine)} (tovar VARCHAR(20), predajna_cena FLOAT(4), pocet_kusov INT)'
+def create_table(machine, columns):
+    command = f'CREATE TABLE {str(machine)} {columns}'
     my_crsr.execute(command)
 
 
@@ -43,14 +23,14 @@ def make_sum():
     return summa
 
 
-def refresh_db(parameter, item=None):
-    if parameter and item:
-        command = f'SELECT {parameter} FROM vending_db.sklad WHERE tovar = {item}'
+def refresh_db(parameter, where, item=None):
+    if parameter and where and item:
+        command = f'SELECT {parameter} FROM {where} WHERE tovar = {item}'
         my_crsr.execute(command)
         db_results = my_crsr.fetchall()
         return db_results
-    elif parameter:
-        command = f'SELECT {parameter} FROM vending_db.sklad'
+    elif parameter and where:
+        command = f'SELECT {parameter} FROM {where}'
         my_crsr.execute(command)
         db_results = my_crsr.fetchall()
         return db_results
@@ -77,6 +57,3 @@ def remove_from_db(where, what):
     command = f'DELETE FROM {where} WHERE {what}'
     my_crsr.execute(command)
     vending_db.commit()
-
-def say_hello():
-    print("Hello meeeen !")
