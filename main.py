@@ -440,11 +440,11 @@ class VendingMachine(Abstract):
             for idx, item in enumerate(set(self.machine_content)):
                 good = item
                 self.machine_good = tk.Label(self.machine_workspace, text=good, anchor="w", font="Arial 11", bg="gray2", fg="white")
-                self.machine_good.grid(row=idx + 2, column=0, padx=10, pady=4)
+                self.machine_good.grid(row=idx + 2, column=0, padx=15, pady=2)
                 self.machine_price = tk.Label(self.machine_workspace, text="0", anchor="w", font="Arial 11", bg="gray2", fg="white")
-                self.machine_price.grid(row=idx + 2, column=1, padx=10, pady=4)
+                self.machine_price.grid(row=idx + 2, column=1, padx=15, pady=2)
                 self.machine_amount = tk.Label(self.machine_workspace, text="0", anchor="w", font="Arial 11", bg="gray2", fg="white")
-                self.machine_amount.grid(row=idx + 2, column=2, padx=10, pady=4)
+                self.machine_amount.grid(row=idx + 2, column=2, padx=15, pady=2)
 
     def load_warehouse(self):
         self.wh_stocks = db.refresh_db("*", 'vending_db.sklad')
