@@ -16,8 +16,8 @@ def create_table(machine, columns):
     my_crsr.execute(command)
 
 
-def make_sum():
-    command = 'SELECT SUM(cena_s_dph * pocet_kusov) FROM vending_db.sklad'
+def make_sum(where):
+    command = f'SELECT SUM(cena_s_dph * pocet_kusov) FROM {where}'
     my_crsr.execute(command)
     summa = my_crsr.fetchall()
     return summa

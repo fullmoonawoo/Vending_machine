@@ -178,7 +178,7 @@ class MainWorkspace(Abstract):
     @staticmethod
     def open_machine(machine_name):
         machine_name = VendingMachine(machine_name)
-        machine_name.initiate_machine_state()
+        machine_name.refresh_machine_state()
         machine_name.run_machine()
 
     def run(self):
@@ -251,7 +251,7 @@ class Warehouse(Abstract):
         return string.replace(",", ".")
 
     def calculate_wh(self):
-        self.wh_worth = db.make_sum()[0][0]
+        self.wh_worth = db.make_sum('vending_db.sklad')[0][0]
         if self.wh_worth is None:
             self.wh_state.config(text=str(0) + " €")
         else:
@@ -402,6 +402,36 @@ class VendingMachine(Abstract):
     def __init__(self, name):
         super().__init__(name)
         self.machine = name
+        # Autoload
+        self.machine_good = None
+        self.warehouse_price = None
+        self.machine_price = None
+        self.machine_amount = None
+        self.name_of_goods = []
+        self.machine_content = []
+        self.wh_stocks = []
+        self.wh = {}
+        self.wh_stack = self.load_warehouse()
+        self.machine_worth = 0
+
+        # Toplevel
+        self.machine_top = None
+        self.machine_date = None
+        self.machine_date_lab = None
+        self.machine_price_lab = None
+        self.good_lab = None
+        self.wh_price_lab = None
+        self.state_sold = None
+        self.state_added = None
+        self.wh_good = None
+        self.wh_good_container = []
+        self.state_sold_entry = None
+        self.state_added_entry = None
+        self.machine_price_label = None
+        self.machine_price_entry = None
+        self.machine_prices_container = []
+        self.row_counter = 0
+
         self.main_color = "green2"
         self.machine_header = tk.Frame(self.workspace, width=self.width - 28, height=self.height / 8, bg="gray12")
         self.machine_header.grid(row=0, column=0, columnspan=3)
@@ -409,7 +439,7 @@ class VendingMachine(Abstract):
         self.title_lab.grid(row=0, column=0, ipady=10)
         self.machine_worth_lab = tk.Label(self.machine_header, text='Hodnota v automate: ', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=60, anchor='e')
         self.machine_worth_lab.grid(row=0, column=1, ipady=12.5, ipadx=10)
-        self.worth_lab = tk.Label(self.machine_header, text='135 €', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=13)
+        self.worth_lab = tk.Label(self.machine_header, text=self.machine_worth, font="Arial 17 bold", bg="gray12", fg=self.main_color, width=13)
         self.worth_lab.grid(row=0, column=2)
         self.machine_frame = tk.Frame(self.workspace, width=700, height=748, bg="gray2")
         self.machine_frame.grid(row=1, column=0, pady=2, padx=2, ipadx=128, sticky="NSW")
@@ -422,46 +452,23 @@ class VendingMachine(Abstract):
         self.machine_amount_title.grid(row=0, column=2, padx=4, pady=4, sticky="NSWE")
         # Machine button frame
         self.machine_button_frame = tk.Frame(self.workspace, width=300, height=748, bg="gray22")
-        self.machine_button_frame.grid(row=1, column=1, rowspan=200, pady=2, padx=2, ipadx=20, ipady=352, sticky="NSE")
-        self.price_change_button = tk.Button(self.machine_button_frame, text="Zmeniť ceny", font="Arial 12 bold", bg="gray26", fg="white")
-        self.price_change_button.grid(row=0, column=0, padx=40, pady=6, ipadx=110, sticky="E")
-        self.change_state_button = tk.Button(self.machine_button_frame, text="Zmeniť stav", font="Arial 12 bold", bg="gray26", fg="white")
-        self.change_state_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.machine_button_frame.grid(row=1, column=1, rowspan=200, pady=2, padx=2, ipadx=20, ipady=374, sticky="NSE")
+        self.change_state_button = tk.Button(self.machine_button_frame, text="Zmeniť stav", command=self.change_state, font="Arial 12 bold", bg="gray26", fg="white")
+        self.change_state_button.grid(row=0, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.filter_button = tk.Button(self.machine_button_frame, text="Filtrovať", font="Arial 12 bold", bg="gray26", fg="white")
-        self.filter_button.grid(row=2, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.filter_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
 
-        # Autoload
-        self.machine_good = None
-        self.warehouse_price = None
-        self.machine_price = None
-        self.machine_amount = None
-        self.name_of_goods = []
-        self.machine_content = []
-        self.wh_stocks = []
-        self.wh = {}
-        self.wh_stack = self.load_warehouse()
-
-    def initiate_machine_state(self):
+    def refresh_machine_state(self):
+        self.calculate_machine()
         self.machine_content = db.refresh_db("*", "vending_db." + self.machine)
-        if len(self.machine_content) == 0:
-            self.machine_content = set(db.refresh_db("tovar", "vending_db.sklad"))
-            for idx, item in enumerate(set(self.machine_content)):
-                good = item
-                self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
-                self.machine_good.grid(row=idx + 2, column=0, pady=1, padx=1)
-                self.machine_price = tk.Label(self.machine_frame, text="0", font="Arial 12", fg="white", bg="gray2")
-                self.machine_price.grid(row=idx + 2, column=1, pady=1, padx=1)
-                self.machine_amount = tk.Label(self.machine_frame, text="0", font="Arial 12", fg="white", bg="gray2")
-                self.machine_amount.grid(row=idx + 2, column=2, pady=1, padx=1)
-        else:
-            for idx, item in enumerate(set(self.machine_content)):
-                good, price, amount = item
-                self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
-                self.machine_good.grid(row=idx + 2, column=0, pady=1, padx=1)
-                self.machine_price = tk.Label(self.machine_frame, text=price, font="Arial 12", fg="white", bg="gray2")
-                self.machine_price.grid(row=idx + 2, column=1, pady=1, padx=1)
-                self.machine_amount = tk.Label(self.machine_frame, text=amount, font="Arial 12", fg="white", bg="gray2")
-                self.machine_amount.grid(row=idx + 2, column=2, pady=1, padx=1)
+        for idx, item in enumerate(set(self.machine_content)):
+            good, cost, price, amount = item
+            self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
+            self.machine_good.grid(row=idx + 2, column=0, pady=1, padx=1)
+            self.machine_price = tk.Label(self.machine_frame, text=price, font="Arial 12", fg="white", bg="gray2")
+            self.machine_price.grid(row=idx + 2, column=1, pady=1, padx=1)
+            self.machine_amount = tk.Label(self.machine_frame, text=amount, font="Arial 12", fg="white", bg="gray2")
+            self.machine_amount.grid(row=idx + 2, column=2, pady=1, padx=1)
 
     def load_warehouse(self):
         self.wh_stocks = db.refresh_db("*", 'vending_db.sklad')
@@ -478,6 +485,67 @@ class VendingMachine(Abstract):
                     else:
                         enqueue(self.wh[good], [cost, amount])
         return self.wh
+
+    def calculate_machine(self):
+        self.machine_worth = db.make_sum("vending_db." + self.machine)[0][0]
+        if self.machine_worth is None:
+            self.worth_lab.config(text=str(0) + " €")
+        else:
+            self.worth_lab.config(text=str(round(self.machine_worth, 2)) + " €")
+
+    def change_state(self):
+        self.machine_top = tk.Toplevel(self.workspace, bg="gray22")
+        self.machine_top.geometry("800x920")
+        self.machine_top.protocol("WM_DELETE_WINDOW", self.close_machine_top)
+        self.machine_date_lab = tk.Label(self.machine_top, text="Dátum nákupu: ", font="Arial 14 bold", bg="gray26", fg="white")
+        self.machine_date_lab.grid(row=0, column=4, padx=10, pady=6)
+        self.machine_date = DateEntry(self.machine_top, date_pattern='yyyy-mm-dd')
+        self.machine_date.grid(row=0, column=5, padx=10, pady=4)
+        self.good_lab = tk.Label(self.machine_top, text="Tovar", font="Arial 14", fg="white", bg="gray26")
+        self.good_lab.grid(row=0, column=0, padx=10, pady=4)
+        self.state_sold = tk.Label(self.machine_top, text="Predané", font="Arial 14", fg="white", bg="gray26")
+        self.state_sold.grid(row=0, column=1, padx=10, pady=4)
+        self.state_added = tk.Label(self.machine_top, text="Doplnené", font="Arial 14", fg="white", bg="gray26")
+        self.state_added.grid(row=0, column=2, padx=10, pady=4)
+        self.machine_price_lab = tk.Label(self.machine_top, text="Predajná cena", font="Arial 14", fg="white", bg="gray26")
+        self.machine_price_lab.grid(row=0, column=3, padx=10, pady=4)
+        tk.Button(self.machine_top, text="Potvrdiť", font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
+        tk.Button(self.machine_top, text="Nastaviť ceny", command=self.change_prices, font="Arial 12 bold", bg="gray26", fg="white").grid(row=2, column=4, columnspan=2, sticky="WE")
+        self.wh_stocks = db.refresh_db("tovar", "vending_db.sklad")
+        for idx, tovar in enumerate(set(self.wh_stocks)):
+            self.wh_good = tk.Label(self.machine_top, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
+            self.wh_good.grid(row=idx + 1, column=0, pady=8, padx=2)
+            self.wh_good_container.append(self.wh_good.cget('text'))
+            self.state_sold_entry = tk.Entry(self.machine_top, width=10)
+            self.state_sold_entry.grid(row=idx + 1, column=1)
+            self.state_added_entry = tk.Entry(self.machine_top, width=10)
+            self.state_added_entry.grid(row=idx + 1, column=2)
+            self.machine_price_label = tk.Label(self.machine_top, text="Cena", width=10, font="Arial 11", bg="gray22", fg="white")
+            self.machine_price_label.grid(row=idx + 1, column=3)
+            self.machine_prices_container.append((tovar, self.machine_price_label, self.machine_price_label.cget('text')))
+            #self.purchase_cont.append((self.price_entry, self.amount_entry, self.ref_var))
+            self.row_counter = idx + 1
+        return self.machine_prices_container
+
+    def change_prices(self):
+        for x in self.machine_prices_container:
+            good, price, old_price = x
+            price.destroy()
+
+        for idx, y in enumerate(self.machine_prices_container):
+            good, price, old_price_t = y
+            self.machine_price_entry = tk.Entry(self.machine_top, width=10)
+            self.machine_price_entry.grid(row=idx + 1, column=3)
+            self.machine_price_entry.insert(0, old_price_t)
+
+        tk.Button(self.machine_top, text="Potvrdiť ceny", command=self.lock_prices, font="Arial 12 bold", bg="gray26", fg="white").grid(row=3, column=4, columnspan=2, sticky="WE")
+
+
+    def lock_prices(self):
+        pass
+
+    def close_machine_top(self):
+        self.machine_top.destroy()
 
     def run_machine(self):
         self.workspace.mainloop()
