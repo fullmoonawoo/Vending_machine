@@ -11,13 +11,17 @@ vending_db = mysql.connect(
 my_crsr = vending_db.cursor()
 
 
-def create_table(machine, columns):
-    command = f'CREATE TABLE {str(machine)} {columns}'
-    my_crsr.execute(command)
+def create_table(machine, columns, primary_key=None):
+    if primary_key:
+        command = f'CREATE TABLE {str(machine)} ({columns}, PRIMARY KEY ({primary_key}))'
+        my_crsr.execute(command)
+    else:
+        command = f'CREATE TABLE {str(machine)} {columns}'
+        my_crsr.execute(command)
 
 
-def make_sum(where):
-    command = f'SELECT SUM(cena_s_dph * pocet_kusov) FROM {where}'
+def make_sum(what, where):
+    command = f'SELECT SUM({what}) FROM {where}'
     my_crsr.execute(command)
     summa = my_crsr.fetchall()
     return summa
@@ -25,7 +29,7 @@ def make_sum(where):
 
 def refresh_db(parameter, where, item=None):
     if parameter and where and item:
-        command = f'SELECT {parameter} FROM {where} WHERE tovar = {item}'
+        command = f'SELECT {parameter} FROM {where} WHERE {item}'
         my_crsr.execute(command)
         db_results = my_crsr.fetchall()
         return db_results

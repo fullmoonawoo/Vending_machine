@@ -118,7 +118,7 @@ class MainWorkspace(Abstract):
             self.vending_machine = tk.Button(self.vending_area, image=self.logo, command=partial(self.open_machine, self.new_name))
             self.vending_machine.grid(row=self.ver_mover+1, column=self.hor_mover, padx=90)
             self.machine_container.append(self.machine_label.cget("text"))
-            db.create_table(self.new_name, "(tovar VARCHAR(20), cena_s_dph FLOAT(4), predajna_cena FLOAT(4), pocet_kusov INT)")
+            db.create_table(self.new_name, "tovar VARCHAR(20), cena_s_dph FLOAT(4), predajna_cena FLOAT(4), pocet_kusov INT", "tovar, cena_s_dph")
             db.create_table(self.new_name + "_predaje", "(datum DATE, tovar VARCHAR(20), cena_s_dph FLOAT(4), predajna_cena FLOAT(4), pocet_kusov INT)")
             self.packing_dat()
             self.hor_mover += 1
@@ -251,7 +251,7 @@ class Warehouse(Abstract):
         return string.replace(",", ".")
 
     def calculate_wh(self):
-        self.wh_worth = db.make_sum('vending_db.sklad')[0][0]
+        self.wh_worth = db.make_sum('cena_s_dph * pocet_kusov', 'vending_db.sklad')[0][0]
         if self.wh_worth is None:
             self.wh_state.config(text=str(0) + " €")
         else:
@@ -409,6 +409,7 @@ class VendingMachine(Abstract):
         self.machine_amount = None
         self.name_of_goods = []
         self.machine_content = []
+        self.machine_content2 = []
         self.wh_stocks = []
         self.wh = {}
         self.wh_stack = self.load_warehouse()
@@ -431,6 +432,7 @@ class VendingMachine(Abstract):
         self.machine_price_entry = None
         self.machine_prices_container = []
         self.row_counter = 0
+        self.row_pos = 0
 
         self.main_color = "green2"
         self.machine_header = tk.Frame(self.workspace, width=self.width - 28, height=self.height / 8, bg="gray12")
@@ -460,15 +462,21 @@ class VendingMachine(Abstract):
 
     def refresh_machine_state(self):
         self.calculate_machine()
-        self.machine_content = db.refresh_db("*", "vending_db." + self.machine)
-        for idx, item in enumerate(set(self.machine_content)):
-            good, cost, price, amount = item
-            self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
-            self.machine_good.grid(row=idx + 2, column=0, pady=1, padx=1)
-            self.machine_price = tk.Label(self.machine_frame, text=price, font="Arial 12", fg="white", bg="gray2")
-            self.machine_price.grid(row=idx + 2, column=1, pady=1, padx=1)
-            self.machine_amount = tk.Label(self.machine_frame, text=amount, font="Arial 12", fg="white", bg="gray2")
-            self.machine_amount.grid(row=idx + 2, column=2, pady=1, padx=1)
+        self.machine_content = db.refresh_db("tovar", "vending_db." + self.machine)
+        for idx, good in enumerate(set(self.machine_content)):
+            good = good[0]
+            good_db = "'" + good + "'"
+            self.machine_content2 = db.refresh_db("predajna_cena, sum(pocet_kusov)", "vending_db." + self.machine, "tovar = " + good_db)
+            self.row_pos = 0
+            for x in self.machine_content2:
+                price, summed_amount = x
+                self.row_pos += idx + 2
+                self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
+                self.machine_good.grid(row=idx + 2, column=0, pady=1, padx=1)
+                self.machine_price = tk.Label(self.machine_frame, text=price, font="Arial 12", fg="white", bg="gray2")
+                self.machine_price.grid(row=idx + 2, column=1, pady=1, padx=1)
+                self.machine_amount = tk.Label(self.machine_frame, text=summed_amount, font="Arial 12", fg="white", bg="gray2")
+                self.machine_amount.grid(row=idx + 2, column=2, pady=1, padx=1)
 
     def load_warehouse(self):
         self.wh_stocks = db.refresh_db("*", 'vending_db.sklad')
@@ -487,7 +495,7 @@ class VendingMachine(Abstract):
         return self.wh
 
     def calculate_machine(self):
-        self.machine_worth = db.make_sum("vending_db." + self.machine)[0][0]
+        self.machine_worth = db.make_sum("cena_s_dph * pocet_kusov", "vending_db." + self.machine)[0][0]
         if self.machine_worth is None:
             self.worth_lab.config(text=str(0) + " €")
         else:
@@ -539,7 +547,6 @@ class VendingMachine(Abstract):
             self.machine_price_entry.insert(0, old_price_t)
 
         tk.Button(self.machine_top, text="Potvrdiť ceny", command=self.lock_prices, font="Arial 12 bold", bg="gray26", fg="white").grid(row=3, column=4, columnspan=2, sticky="WE")
-
 
     def lock_prices(self):
         pass
