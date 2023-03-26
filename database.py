@@ -51,10 +51,16 @@ def insert_db(where, titles, what, col_for_update=None):
         vending_db.commit()
 
 
-def update_db(where, title, result1, what, price):
-    command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what} and cena_s_dph between {price - 0.01} and {price + 0.01}'
-    my_crsr.execute(command)
-    vending_db.commit()
+def update_db(where, title, result1, what, price=None):
+    if price:
+        command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what} and cena_s_dph between {price - 0.01} and {price + 0.01}'
+        my_crsr.execute(command)
+        vending_db.commit()
+    else:
+        command = f'UPDATE {where} SET {title} = {result1} WHERE tovar = {what}'
+        my_crsr.execute(command)
+        vending_db.commit()
+
 
 
 def remove_from_db(where, what):
