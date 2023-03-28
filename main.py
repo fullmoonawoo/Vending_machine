@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
-from tkinter import simpledialog
+from tkinter import simpledialog, messagebox
 from tkcalendar import DateEntry
 from time import strftime
 from functools import partial
@@ -428,6 +428,7 @@ class VendingMachine(Abstract):
         self.state_added = None
         self.wh_good = None
         self.wh_good_container = []
+        self.temp_amount = None
         self.state_sold_entry = None
         self.state_added_entry = None
         self.machine_price_label = None
@@ -470,7 +471,7 @@ class VendingMachine(Abstract):
         self.filter_button.grid(row=3, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
 
     def refresh_machine_state(self):
-        self.wh_stack = self.load_warehouse()
+        self.wh_stack = self.load_warehouse('vending_db.sklad')
         # print(self.wh_stack['Deli'][0][0]) for conditions
         self.calculate_machine()
         self.machine_content = db.refresh_db("tovar", "vending_db." + self.machine)
@@ -481,7 +482,6 @@ class VendingMachine(Abstract):
             self.row_pos = 2
             for x in self.machine_content2:
                 price, summed_amount = x
-                #self.row_pos += idx + 2
                 self.machine_good = tk.Label(self.machine_frame, text=good, font="Arial 12", fg="white", bg="gray2")
                 self.machine_good.grid(row=self.row_pos + idx, column=0, pady=1, padx=1)
                 self.machine_price = tk.Label(self.machine_frame, text=price, font="Arial 12", fg="white", bg="gray2")
@@ -492,8 +492,8 @@ class VendingMachine(Abstract):
                 self.machine_prices_container.append([good, self.machine_price.cget('text'), "empty", "empty2"])
         return self.machine_prices_container, self.wh_stack
 
-    def load_warehouse(self):
-        self.wh_stocks = db.refresh_db("*", 'vending_db.sklad')
+    def load_warehouse(self, from_where):
+        self.wh_stocks = db.refresh_db("*", from_where)
         for x in self.wh_stocks:
             good, cost, amount = x
             if good not in self.wh.keys():
@@ -516,6 +516,7 @@ class VendingMachine(Abstract):
             self.worth_lab.config(text=str(round(self.machine_worth, 2)) + " €")
 
     def pull_warehouse(self):
+        self.wh_good_container = []
         self.machine_top = tk.Toplevel(self.workspace, bg="gray22")
         self.machine_top.geometry("800x930")
         self.machine_top.protocol("WM_DELETE_WINDOW", self.close_machine_top)
@@ -527,7 +528,7 @@ class VendingMachine(Abstract):
         self.good_lab.grid(row=0, column=0, padx=10, pady=4)
         self.state_added = tk.Label(self.machine_top, text="Počet kusov", width=15, font="Arial 14", fg="white", bg="gray26")
         self.state_added.grid(row=0, column=1, padx=10, pady=4)
-        tk.Button(self.machine_top, text="Potvrdiť", width=30, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2)
+        tk.Button(self.machine_top, text="Potvrdiť", width=30, command=self.move_from_wh, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2)
         self.wh_stocks = db.refresh_db("tovar", "vending_db.sklad")
         for idx, tovar in enumerate(set(self.wh_stocks)):
             tovar = tovar[0]
@@ -536,10 +537,30 @@ class VendingMachine(Abstract):
             self.state_added_entry = tk.Entry(self.machine_top, width=10)
             self.state_added_entry.grid(row=idx + 1, column=1)
             self.row_counter = idx + 1
-        return self.machine_prices_container
+            self.wh_good_container.append((tovar, self.state_added_entry))
+        return self.wh_good_container
+
+    def print_message(self, title, body):
+        messagebox.showinfo(title, body)
 
     def move_from_wh(self):
-        pass
+        for x in self.wh_good_container:
+            good, entry = x
+            entry = entry.get()
+            self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
+            if len(entry) == 0:
+                print("Nothing happend")
+            elif int(entry) >= self.temp_amount:
+                self.print_message("Upozornenie", f'Zostávajúci počet kusov položky {good} je: {self.temp_amount}')
+                continue
+            else:
+                pass
+
+        for x in range(len(self.machine_prices_container) - 1):
+            print(self.wh_stocks, "WH STOCKS")
+            print(self.wh_stack, "WH STACK")
+            print(self.machine_prices_container, "MACHINE PRICE CONTAINER")
+            print(self.wh_good_container, "WH GOOD CONTAINER")
 
     def change_prices(self):
         self.add_good_button['state'] = tk.DISABLED
