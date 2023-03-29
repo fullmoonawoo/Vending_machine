@@ -408,11 +408,12 @@ class VendingMachine(Abstract):
         self.warehouse_price = None
         self.machine_price = None
         self.machine_amount = None
-        self.name_of_goods = []
+        #self.name_of_goods = []
         self.machine_content = []
         self.machine_content2 = []
         self.wh_stocks = []
         self.wh = {}
+        self.machine_prices_check = {}
         self.wh_stack = None
         self.machine_worth = 0
 
@@ -432,6 +433,7 @@ class VendingMachine(Abstract):
         self.wh_good = None
         self.wh_good_container = []
         self.temp_amount = None
+        self.selling_price = 0
         self.state_sold_entry = None
         self.state_added_entry = None
         self.machine_price_label = None
@@ -491,9 +493,10 @@ class VendingMachine(Abstract):
                 self.machine_price.grid(row=self.row_pos + idx, column=1, pady=1, padx=1)
                 self.machine_amount = tk.Label(self.machine_frame, text=summed_amount, font="Arial 12", fg="white", bg="gray2")
                 self.machine_amount.grid(row=self.row_pos + idx, column=2, pady=1, padx=1)
-
                 self.machine_prices_container.append([good, self.machine_price.cget('text'), "empty", "empty2"])
-        return self.machine_prices_container, self.wh_stack
+                self.machine_prices_check[good] = price
+
+        return self.machine_prices_container, self.machine_prices_check, self.wh_stack
 
     def load_warehouse(self, from_where):
         self.wh_stocks = db.refresh_db("*", from_where)
@@ -557,7 +560,7 @@ class VendingMachine(Abstract):
             good, entry = x
             entry = entry.get()
             self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
-            price = self.wh_stack[good][0][0]
+            cost = self.wh_stack[good][0][0]
             if len(entry) == 0:
                 print("Nothing happend")
             elif not entry.isdigit():
@@ -567,18 +570,31 @@ class VendingMachine(Abstract):
                 self.print_message("Upozornenie", f'Zostávajúci počet kusov položky {good} je: {self.temp_amount}')
                 continue
             else:
-                if int(entry) <= self.wh_stack[good][0][1]:
-                    self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
-                    db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, price, entry)), "pocet_kusov = pocet_kusov + " + entry)
-                    # db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)", str((self.machine_date.get(), good, price, entry)), "pocet_kusov = pocet_kusov - " + entry)
-                    db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, price, entry)), "pocet_kusov = pocet_kusov - " + entry)
+                if good not in self.machine_prices_check.keys() or self.machine_prices_check[good] is None:
+                    self.selling_price = simpledialog.askstring("Nastav cenu", f'Zadaj predajnú cenu pre {good}: ')
+                    self.selling_price = transform_str(self.selling_price)
+                    if int(entry) <= self.wh_stack[good][0][1]:
+                        self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, entry)), "pocet_kusov = pocet_kusov + " + entry)
+                        #db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     #str((self.machine_date.get(), good, cost, entry, "D")), "pocet_kusov = " + entry)
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov - " + entry)
+                    elif int(entry) > self.wh_stack[good][0][1]:
+                        pass
+                else:
+                    if int(entry) <= self.wh_stack[good][0][1]:
+                        self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov + " + entry)
+                        #db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     #str((self.machine_date.get(), good, cost, entry, "D")), "pocet_kusov = " + entry)
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov - " + entry)
 
 
-        for x in range(len(self.machine_prices_container) - 1):
-            print(self.wh_stocks, "WH STOCKS")
-            print(self.wh_stack, "WH STACK")
-            print(self.machine_prices_container, "MACHINE PRICE CONTAINER")
-            print(self.wh_good_container, "WH GOOD CONTAINER")
+        #for x in range(len(self.machine_prices_container) - 1):
+            #print(self.wh_stocks, "WH STOCKS")
+            #print(self.wh_stack, "WH STACK")
+            #print(self.machine_prices_container, "MACHINE PRICE CONTAINER")
+            #print(self.wh_good_container, "WH GOOD CONTAINER")
 
     def change_prices(self):
         self.add_good_button['state'] = tk.DISABLED
