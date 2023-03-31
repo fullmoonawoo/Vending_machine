@@ -404,6 +404,7 @@ class VendingMachine(Abstract):
         super().__init__(name)
         self.machine = name
         # Autoload
+        # refresh state
         self.machine_good = None
         self.warehouse_price = None
         self.machine_price = None
@@ -413,9 +414,11 @@ class VendingMachine(Abstract):
         self.machine_content2 = []
         self.wh_stocks = []
         self.wh = {}
-        self.machine_prices_check = {}
         self.wh_stack = None
+        self.machine_prices_container = []
         self.machine_worth = 0
+
+        self.machine_prices_check = {}
 
         # Toplevel
         self.machine_top = None
@@ -441,7 +444,7 @@ class VendingMachine(Abstract):
         self.sold_amount_title = None
         self.sold_amount_entry = None
         self.confirm_sold_button = None
-        self.machine_prices_container = []
+
         self.row_counter = 0
         self.row_pos = 0
 
@@ -556,6 +559,7 @@ class VendingMachine(Abstract):
         messagebox.showinfo(title, body)
 
     def move_from_wh(self):
+        print(self.wh_good_container)
         for x in self.wh_good_container:
             good, entry = x
             entry = entry.get()
@@ -575,9 +579,10 @@ class VendingMachine(Abstract):
                     self.selling_price = transform_str(self.selling_price)
                     if int(entry) <= self.wh_stack[good][0][1]:
                         self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
+                        print("I was here")
                         db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, entry)), "pocet_kusov = pocet_kusov + " + entry)
-                        #db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
-                                     #str((self.machine_date.get(), good, cost, entry, "D")), "pocet_kusov = " + entry)
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     str((self.machine_date.get(), good, cost, self.selling_price, entry, "D")))
                         db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov - " + entry)
                     elif int(entry) > self.wh_stack[good][0][1]:
                         pass
