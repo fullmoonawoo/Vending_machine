@@ -480,7 +480,6 @@ class VendingMachine(Abstract):
 
     def refresh_machine_state(self):
         self.wh_stack = self.load_warehouse('vending_db.sklad')
-        # print(self.wh_stack['Deli'][0][0]) for conditions
         self.calculate_machine()
         self.machine_content = db.refresh_db("tovar", "vending_db." + self.machine)
         for idx, good in enumerate(set(self.machine_content)):
@@ -559,47 +558,76 @@ class VendingMachine(Abstract):
         messagebox.showinfo(title, body)
 
     def move_from_wh(self):
-        print(self.wh_good_container)
         for x in self.wh_good_container:
-            good, entry = x
-            entry = entry.get()
+            good, pull_entry = x
+            pulled_amount = pull_entry.get()
             self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
             cost = self.wh_stack[good][0][0]
-            if len(entry) == 0:
+            if len(pulled_amount) == 0:
                 print("Nothing happend")
-            elif not entry.isdigit():
+            elif not pulled_amount.isdigit():
                 self.print_message("Nevalidný vstup", f'Pre položku {good} ste nezadali číselnú hodnotu')
                 continue
-            elif int(entry) >= self.temp_amount:
+            elif int(pulled_amount) >= self.temp_amount:
                 self.print_message("Upozornenie", f'Zostávajúci počet kusov položky {good} je: {self.temp_amount}')
                 continue
             else:
                 if good not in self.machine_prices_check.keys() or self.machine_prices_check[good] is None:
+                    print("With selling price")
                     self.selling_price = simpledialog.askstring("Nastav cenu", f'Zadaj predajnú cenu pre {good}: ')
                     self.selling_price = transform_str(self.selling_price)
-                    if int(entry) <= self.wh_stack[good][0][1]:
-                        self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
-                        print("I was here")
-                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, entry)), "pocet_kusov = pocet_kusov + " + entry)
+                    if int(pulled_amount) <= self.wh_stack[good][0][1]:
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, pulled_amount)),
+                                     "pocet_kusov = pocet_kusov + " + pulled_amount)
                         db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
-                                     str((self.machine_date.get(), good, cost, self.selling_price, entry, "D")))
-                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov - " + entry)
-                    elif int(entry) > self.wh_stack[good][0][1]:
-                        pass
+                                     str((self.machine_date.get(), good, cost, self.selling_price, pulled_amount, "D")))
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + pulled_amount)
+                    elif int(pulled_amount) > self.wh_stack[good][0][1]:
+                        for wh_item in self.wh_stack[good]:
+                            cost, amount = wh_item
+                            if pulled_amount > amount:
+                                pulled_amount -= amount
+                                db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, amount)),
+                                             "pocet_kusov = pocet_kusov + " + amount)
+                                db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                             str((self.machine_date.get(), good, cost, self.selling_price, amount, "D")))
+                                db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + amount)
+                            elif pulled_amount <= amount:
+                                amount -= pulled_amount
+                                db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, self.selling_price, pulled_amount)),
+                                             "pocet_kusov = pocet_kusov + " + pulled_amount)
+                                db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                             str((self.machine_date.get(), good, cost, self.selling_price, pulled_amount, "D")))
+                                db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + pulled_amount)
+                                break
                 else:
-                    if int(entry) <= self.wh_stack[good][0][1]:
-                        self.amount_for_wh = self.wh_stack[good][0][1] - int(entry)
-                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov + " + entry)
-                        #db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
-                                     #str((self.machine_date.get(), good, cost, entry, "D")), "pocet_kusov = " + entry)
-                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, entry)), "pocet_kusov = pocet_kusov - " + entry)
+                    print("Without selling price")
+                    if int(pulled_amount) <= self.wh_stack[good][0][1]:
+                        print("I was here")
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)),
+                                     "pocet_kusov = pocet_kusov + " + pulled_amount)
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, pocet_kusov, status)",
+                                     str((self.machine_date.get(), good, cost, pulled_amount, "D")))
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + pulled_amount)
+                    elif int(pulled_amount) > self.wh_stack[good][0][1]:
+                        for wh_item in self.wh_stack[good]:
+                            cost, amount = wh_item
+                            if pulled_amount > amount:
+                                pulled_amount -= amount
+                                db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, amount)),
+                                             "pocet_kusov = pocet_kusov + " + amount)
+                                db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, pocet_kusov, status)",
+                                             str((self.machine_date.get(), good, cost, amount, "D")))
+                                db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + amount)
+                            elif pulled_amount <= amount:
+                                amount -= pulled_amount
+                                db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)),
+                                             "pocet_kusov = pocet_kusov + " + pulled_amount)
+                                db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, pocet_kusov, status)",
+                                             str((self.machine_date.get(), good, cost, pulled_amount, "D")))
+                                db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, pulled_amount)), "pocet_kusov = pocet_kusov - " + pulled_amount)
+                                break
 
-
-        #for x in range(len(self.machine_prices_container) - 1):
-            #print(self.wh_stocks, "WH STOCKS")
-            #print(self.wh_stack, "WH STACK")
-            #print(self.machine_prices_container, "MACHINE PRICE CONTAINER")
-            #print(self.wh_good_container, "WH GOOD CONTAINER")
 
     def change_prices(self):
         self.add_good_button['state'] = tk.DISABLED
