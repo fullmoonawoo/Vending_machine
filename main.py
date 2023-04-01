@@ -557,6 +557,7 @@ class VendingMachine(Abstract):
     def print_message(title, body):
         messagebox.showinfo(title, body)
 
+
     def move_from_wh(self):
         for x in self.wh_good_container:
             good, pull_entry = x
