@@ -30,6 +30,9 @@ def empty_queue(queue):
 
 def transform_str(string):
     return string.replace(",", ".")
+
+def transform_dot(string):
+    return string.replace(".", "")
 # Frontend
 
 
@@ -106,7 +109,6 @@ class MainWorkspace(Abstract):
 
     def packing_dat(self):
         with open("machine_container.txt", "w") as dat_machines:
-            print(dat_machines)
             for machine in self.machine_container:
                 machine = machine + "**"
                 dat_machines.write(machine)
@@ -115,6 +117,7 @@ class MainWorkspace(Abstract):
 
     def add_machine(self):
         self.new_name = simpledialog.askstring("Nový automat", "Zadaj názov automatu: ")
+        self.new_name = transform_dot(self.new_name)
         if self.new_name:
             self.plus.destroy()
             self.machine_label = tk.Label(self.vending_area, text=self.new_name, font="Aerial 14 bold", bg="gray22", fg="white")
@@ -151,7 +154,6 @@ class MainWorkspace(Abstract):
             self.date_refresh()
 
     def initiate_base_state(self):
-        print(self.machine_container, len(self.machine_container))
         if len(self.machine_container) != 0:
             for machine in self.machine_container:
                 self.plus.destroy()
@@ -290,26 +292,26 @@ class Warehouse(Abstract):
 
     def add_goods(self):
         self.new_purchase = tk.Toplevel(self.wh_workspace, bg="gray22")
-        self.new_purchase.geometry("800x800")
+        self.new_purchase.geometry("800x1000")
         self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
-        self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 14 bold", bg="gray26", fg="white")
+        self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 12 bold", bg="gray26", fg="white")
         self.purchase_date_label.grid(row=0, column=4, padx=10, pady=6)
         self.purchase_date = DateEntry(self.new_purchase, date_pattern='yyyy-mm-dd')
         self.purchase_date.grid(row=0, column=5, padx=10, pady=4)
-        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 14", fg="white", bg="gray26")
+        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 12", fg="white", bg="gray26")
         self.good_label.grid(row=0, column=0, padx=10, pady=4)
-        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 14", fg="white", bg="gray26")
+        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 12", fg="white", bg="gray26")
         self.price_label.grid(row=0, column=1, padx=10, pady=4)
-        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 14", fg="white", bg="gray26")
+        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 12", fg="white", bg="gray26")
         self.amount_label.grid(row=0, column=2, padx=10, pady=4)
-        self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 14", fg="white", bg="gray26")
+        self.refundable_label = tk.Label(self.new_purchase, text="Zálohovanie", font="Arial 12", fg="white", bg="gray26")
         self.refundable_label.grid(row=0, column=3, padx=10, pady=4)
         tk.Button(self.new_purchase, text="Potvrdiť", command=self.make_purchase, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
         self.wh_stocks = db.refresh_db("tovar", "vending_db.sklad")
         for idx, tovar in enumerate(set(self.wh_stocks)):
             tovar = tovar[0]
-            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
-            self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
+            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 10", bg="gray22", fg="white")
+            self.name_of_good.grid(row=idx + 1, column=0, pady=2, padx=2)
             self.good_name_cont.append(self.name_of_good.cget('text'))
             self.price_entry = tk.Entry(self.new_purchase, width=10)
             self.price_entry.grid(row=idx + 1, column=1)
@@ -321,14 +323,14 @@ class Warehouse(Abstract):
             self.purchase_cont.append((self.price_entry, self.amount_entry, self.ref_var))
             self.row_counter = idx + 1
         self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 11", bg="gray22", fg="white")
-        self.plus_row.grid(row=self.row_counter + 2, column=0)
+        self.plus_row.grid(row=self.row_counter + 2, column=0, pady=4)
 
     def add_new_good(self):
         self.new_good = simpledialog.askstring("Nový tovar", "Zadaj názov tovaru: ")
         if self.new_good:
             self.plus_row.destroy()
-            self.name_of_good = tk.Label(self.new_purchase, text=self.new_good, anchor="w", font="Arial 11", bg="gray22", fg="white")
-            self.name_of_good.grid(row=self.row_counter + 1, column=0, pady=8, padx=2)
+            self.name_of_good = tk.Label(self.new_purchase, text=self.new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
+            self.name_of_good.grid(row=self.row_counter + 1, column=0, pady=2, padx=2)
             self.good_name_cont.append(self.name_of_good.cget('text'))
             self.price_entry = tk.Entry(self.new_purchase, width=10)
             self.price_entry.grid(row=self.row_counter + 1, column=1)
@@ -340,17 +342,17 @@ class Warehouse(Abstract):
             self.purchase_cont.append((self.price_entry, self.amount_entry, self.ref_var))
             self.row_counter += 1
             self.plus_row = tk.Button(self.new_purchase, text="+", command=self.add_new_good, anchor="w", font="Arial 10", bg="gray22", fg="white")
-            self.plus_row.grid(row=self.row_counter + 1, column=0)
+            self.plus_row.grid(row=self.row_counter + 1, column=0, pady=4)
 
     def remove_wh_good(self):
         for x in self.purchase_cont:
             good, price, amount, change = x
             change = change.get()
             if len(change) == 0:
-                print("Nothing happend")
+                pass
             else:
                 db.insert_db("vending_db.sklad", "(tovar, cena_s_dph, pocet_kusov)", str((good, float(price), amount)), "pocet_kusov = pocet_kusov - " + str(change))
-                #db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((self.purchase_date.get(), good, float(price), amount)))
+                db.insert_db("vending_db.nakupy", "(datum, tovar, nakupna_cena, pocet_kusov)", str((gui.selling_date, good, float(price), amount)))
             db.remove_from_db('vending_db.sklad', 'pocet_kusov = 0')
         self.close_toplevel()
 
@@ -360,24 +362,24 @@ class Warehouse(Abstract):
         self.new_purchase.protocol("WM_DELETE_WINDOW", self.close_toplevel)
         #self.scrollbar = tk.Scrollbar(self.new_purchase)
         #self.scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 14 bold", bg="gray26", fg="white")
+        self.purchase_date_label = tk.Label(self.new_purchase, text="Dátum nákupu: ", font="Arial 12 bold", bg="gray26", fg="white")
         self.purchase_date_label.grid(row=0, column=4, padx=10, pady=6)
         self.purchase_date = DateEntry(self.new_purchase, date_pattern='dd-mm-yyyy')
         self.purchase_date.grid(row=0, column=5, padx=10, pady=4)
-        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 14", fg="white", bg="gray26")
+        self.good_label = tk.Label(self.new_purchase, text="Tovar", font="Arial 12", fg="white", bg="gray26")
         self.good_label.grid(row=0, column=0, padx=10, pady=4)
-        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 14", fg="white", bg="gray26")
+        self.price_label = tk.Label(self.new_purchase, text="Nák. cena s DPH", font="Arial 12", fg="white", bg="gray26")
         self.price_label.grid(row=0, column=1, padx=10, pady=4)
-        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 14", fg="white", bg="gray26")
+        self.amount_label = tk.Label(self.new_purchase, text="Množstvo", font="Arial 12", fg="white", bg="gray26")
         self.amount_label.grid(row=0, column=2, padx=10, pady=4)
-        self.reduced = tk.Label(self.new_purchase, text="Odpočítať", font="Arial 14", fg="white", bg="gray26")
+        self.reduced = tk.Label(self.new_purchase, text="Odpočítať", font="Arial 12", fg="white", bg="gray26")
         self.reduced.grid(row=0, column=3, padx=10, pady=4)
         tk.Button(self.new_purchase, text="Odpočítať", command=self.remove_wh_good, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2, sticky="WE")
         self.wh_stocks = db.refresh_db("*", "vending_db.sklad")
         for idx, x in enumerate(set(self.wh_stocks)):
             tovar, cena, mnozstvo = x
-            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 11", bg="gray22", fg="white")
-            self.name_of_good.grid(row=idx + 1, column=0, pady=8, padx=2)
+            self.name_of_good = tk.Label(self.new_purchase, text=tovar, anchor="w", font="Arial 10", bg="gray22", fg="white")
+            self.name_of_good.grid(row=idx + 1, column=0, pady=2, padx=2)
             self.price_lab = tk.Label(self.new_purchase, text=cena, width=10)
             self.price_lab.grid(row=idx + 1, column=1)
             self.amount_lab = tk.Label(self.new_purchase, text=mnozstvo, width=10)
@@ -418,6 +420,7 @@ class VendingMachine(Abstract):
         self.wh_stack = None
         self.machine_prices_container = []
         self.machine_worth = 0
+        self.aux = 0
 
         self.machine_prices_check = {}
 
@@ -452,10 +455,10 @@ class VendingMachine(Abstract):
         self.main_color = "green2"
         self.machine_header = tk.Frame(self.workspace, width=self.width - 28, height=self.height / 8, bg="gray12")
         self.machine_header.grid(row=0, column=0, columnspan=3)
-        self.title_lab = tk.Label(self.machine_header, text=name, font="Arial 20 bold", bg="gray12", fg=self.main_color, width=10)
-        self.title_lab.grid(row=0, column=0, ipady=10)
-        self.machine_worth_lab = tk.Label(self.machine_header, text='Hodnota v automate: ', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=60, anchor='e')
-        self.machine_worth_lab.grid(row=0, column=1, ipady=12.5, ipadx=10)
+        self.title_lab = tk.Label(self.machine_header, text=name, font="Arial 20 bold", bg="gray12", fg=self.main_color, width=15)
+        self.title_lab.grid(row=0, column=0, ipady=10, padx=4)
+        self.machine_worth_lab = tk.Label(self.machine_header, text='Hodnota v automate: ', font="Arial 17 bold", bg="gray12", fg=self.main_color, width=55, anchor='e')
+        self.machine_worth_lab.grid(row=0, column=1, ipady=12.5, sticky="WE")
         self.worth_lab = tk.Label(self.machine_header, text=self.machine_worth, font="Arial 17 bold", bg="gray12", fg=self.main_color, width=13)
         self.worth_lab.grid(row=0, column=2)
         self.machine_frame = tk.Frame(self.workspace, width=700, height=748, bg="gray2")
@@ -469,15 +472,19 @@ class VendingMachine(Abstract):
         self.machine_amount_title.grid(row=0, column=2, padx=4, pady=4, sticky="NSWE")
         # Machine button frame
         self.machine_button_frame = tk.Frame(self.workspace, width=300, height=748, bg="gray22")
-        self.machine_button_frame.grid(row=1, column=1, rowspan=200, pady=2, padx=2, ipadx=20, ipady=330, sticky="NSE")
+        self.machine_button_frame.grid(row=1, column=1, rowspan=200, pady=2, padx=2, ipadx=20, ipady=284, sticky="NSE")
         self.add_good_button = tk.Button(self.machine_button_frame, text="Doplniť automat", command=self.pull_warehouse, font="Arial 12 bold", bg="gray26", fg="white")
         self.add_good_button.grid(row=0, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.sold_goods_button = tk.Button(self.machine_button_frame, text="Zadať predané", command=self.open_sold_entries, font="Arial 12 bold", bg="gray26", fg="white")
         self.sold_goods_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.set_price_button = tk.Button(self.machine_button_frame, text="Nastaviť ceny", command=self.change_prices, font="Arial 12 bold", bg="gray26", fg="white")
         self.set_price_button.grid(row=2, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.storno_button = tk.Button(self.machine_button_frame, text="Storno tovaru", command=self.open_storno_entries, font="Arial 12 bold", bg="gray26", fg="white")
+        self.storno_button.grid(row=3, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.move_to_wh_button = tk.Button(self.machine_button_frame, text="Automat --> Sklad", command=self.open_wh_entries, font="Arial 12 bold", bg="gray26", fg="white")
+        self.move_to_wh_button.grid(row=4, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.filter_button = tk.Button(self.machine_button_frame, text="Filtrovať", font="Arial 12 bold", bg="gray26", fg="white")
-        self.filter_button.grid(row=3, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.filter_button.grid(row=5, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
 
     def refresh_machine_state(self):
         self.wh_stack = self.load_warehouse()
@@ -496,15 +503,15 @@ class VendingMachine(Abstract):
                 self.machine_price.grid(row=self.row_pos + idx, column=1, pady=1, padx=1)
                 self.machine_amount = tk.Label(self.machine_frame, text=summed_amount, font="Arial 12", fg="white", bg="gray2")
                 self.machine_amount.grid(row=self.row_pos + idx, column=2, pady=1, padx=1)
-                self.machine_prices_container.append([good, self.machine_price.cget('text'), "empty", "empty2"])
+                self.machine_prices_container.append([good, price, "empty", "empty2"])
                 self.machine_prices_check[good] = price
 
         return self.machine_prices_container, self.machine_prices_check, self.wh_stack
 
     def load_warehouse(self, from_where=None):
         if from_where:
+            self.wh = {}
             self.wh_stocks = db.refresh_db("*", from_where)
-            print(self.wh_stocks)
             for x in self.wh_stocks:
                 good, cost, selling_price, amount = x
                 if good not in self.wh.keys():
@@ -512,9 +519,8 @@ class VendingMachine(Abstract):
                     enqueue(self.wh[good], [cost, selling_price, amount])
                 elif good in self.wh.keys():
                     for y in range(len(self.wh[good])):
-                        print(self.wh)
                         if self.wh[good][y][0] == cost:
-                            self.wh[good][y][2] += amount
+                            self.wh[good][y][2] += str(amount)
                             break
                         else:
                             enqueue(self.wh[good], [cost, selling_price, amount])
@@ -656,6 +662,7 @@ class VendingMachine(Abstract):
             self.machine_price_entry.grid(row=self.row_pos + idx, column=1, pady=1, padx=1)
             self.machine_price_entry.insert(0, old_price)
             self.machine_prices_container[idx][2] = self.machine_price_entry
+        print(self.machine_prices_container)
 
         return self.machine_prices_container
 
@@ -664,16 +671,16 @@ class VendingMachine(Abstract):
         self.sold_goods_button['state'] = tk.ACTIVE
         self.confirm_price_button.destroy()
 
-        for x in self.machine_prices_container:
+        for idx, x in enumerate(self.machine_prices_container):
             good, old_price, price_widget, empty2 = x
             good = "'" + good + "'"
             price = transform_str(price_widget.get())
             db.update_db("vending_db." + self.machine, "predajna_cena", price, good)
+            self.machine_prices_container[idx][2] = "empty"
             price_widget.destroy()
 
         self.set_price_button = tk.Button(self.machine_button_frame, text="Nastaviť ceny", command=self.change_prices, font="Arial 12 bold", bg="gray26", fg="white")
         self.set_price_button.grid(row=2, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
-        self.machine_prices_container = []
         self.refresh_machine_state()
 
     def open_sold_entries(self):
@@ -681,6 +688,7 @@ class VendingMachine(Abstract):
         self.sold_goods_button.destroy()
         self.set_price_button['state'] = tk.DISABLED
         self.add_good_button['state'] = tk.DISABLED
+        self.storno_button['state'] = tk.DISABLED
         self.confirm_sold_button = tk.Button(self.machine_button_frame, text="Potvrdiť predané", command=self.count_sold, font="Arial 12 bold", bg="gray26", fg="green2")
         self.confirm_sold_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.sold_amount_title = tk.Label(self.machine_frame, text="Stav po predaji", width=15, font="Arial 14", fg="white", bg="gray22")
@@ -691,26 +699,26 @@ class VendingMachine(Abstract):
             self.sold_amount_entry = tk.Entry(self.machine_frame, width=10)
             self.sold_amount_entry.grid(row=self.row_pos + idx, column=3)
             self.machine_prices_container[idx][3] = self.sold_amount_entry
-        return self.machine_prices_container
 
     def count_sold(self):
         self.sold_amount_title.destroy()
         self.machine_frame.grid_configure(ipadx=128)
         self.set_price_button['state'] = tk.ACTIVE
         self.add_good_button['state'] = tk.ACTIVE
-        #self.wh_stack = self.load_warehouse("vending_db." + self.machine)
+        self.storno_button['state'] = tk.ACTIVE
+        self.wh_stack = self.load_warehouse("vending_db." + self.machine)
 
-        for x in self.machine_prices_container:
+        for idx, x in enumerate(self.machine_prices_container):
             good, old_price, price_widget, sold_widget = x
             sold = sold_widget.get()
             self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
             if len(sold_widget.get()) == 0:
-                print("Nothing happend")
+                pass
             elif not sold.isdigit():
                 self.print_message("Nevalidný vstup", f'Pre položku {good} ste nezadali číselnú hodnotu')
                 continue
             elif int(sold) > self.temp_amount:
-                self.print_message("Upozornenie", f'Zostávajúci počet kusov položky {good} je: {self.temp_amount}')
+                self.print_message("Upozornenie", f'Zostávajúci počet kusov v automate z položky {good} je: {self.temp_amount}')
                 continue
             else:
                 sold = int(sold)
@@ -718,7 +726,6 @@ class VendingMachine(Abstract):
                     cost = self.wh_stack[good][0][0]
                     good_db = "'" + good + "'"
                     self.machine_content2 = db.refresh_db("predajna_cena", "vending_db." + self.machine, "tovar = " + good_db)
-                    print(self.machine_content2, "machine content2")
                     selling_price = self.machine_content2[0][0]
                     if sold <= self.wh_stack[good][0][1]:
                         self.aux = self.wh_stack[good][0][1] - sold
@@ -738,10 +745,169 @@ class VendingMachine(Abstract):
                         dequeue(self.wh_stack[good])
 
             sold_widget.destroy()
+        db.remove_from_db("vending_db." + self.machine, "pocet_kusov = 0")
+        self.machine_prices_container = []
         self.wh_stack = {}
         self.refresh_machine_state()
         self.sold_goods_button = tk.Button(self.machine_button_frame, text="Zadať predané", command=self.open_sold_entries, font="Arial 12 bold", bg="gray26", fg="white")
         self.sold_goods_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+
+    def open_storno_entries(self):
+        self.machine_frame.grid_configure(ipadx=37)
+        self.storno_button.destroy()
+        self.sold_goods_button['state'] = tk.DISABLED
+        self.set_price_button['state'] = tk.DISABLED
+        self.add_good_button['state'] = tk.DISABLED
+        self.move_to_wh_button['state'] = tk.DISABLED
+        self.filter_button['state'] = tk.DISABLED
+        self.confirm_sold_button = tk.Button(self.machine_button_frame, text="Storno", command=self.storno_amount, font="Arial 12 bold", bg="gray26", fg="green2")
+        self.confirm_sold_button.grid(row=3, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.sold_amount_title = tk.Label(self.machine_frame, text="Počet pre storno", width=15, font="Arial 14", fg="white", bg="gray22")
+        self.sold_amount_title.grid(row=0, column=3, padx=4, pady=4, ipadx=2, sticky="NSWE")
+        self.row_pos = 2
+        for idx, x in enumerate(self.machine_prices_container):
+            good, old_price, price_widget, empty2 = x
+            self.sold_amount_entry = tk.Entry(self.machine_frame, width=10)
+            self.sold_amount_entry.grid(row=self.row_pos + idx, column=3)
+            self.machine_prices_container[idx][3] = self.sold_amount_entry
+
+        return self.machine_prices_container
+
+    def storno_amount(self):
+        self.sold_amount_title.destroy()
+        self.machine_frame.grid_configure(ipadx=128)
+        self.sold_goods_button['state'] = tk.ACTIVE
+        self.set_price_button['state'] = tk.ACTIVE
+        self.add_good_button['state'] = tk.ACTIVE
+        self.move_to_wh_button['state'] = tk.ACTIVE
+        self.filter_button['state'] = tk.ACTIVE
+        self.wh_stack = self.load_warehouse("vending_db." + self.machine)
+
+        for idx, x in enumerate(self.machine_prices_container):
+            good, old_price, price_widget, storno_widget = x
+            sold = storno_widget.get()
+            self.temp_amount = sum([self.wh_stack[good][a][2] for a in range(len(self.wh_stack[good]))])
+            if len(storno_widget.get()) == 0:
+                pass
+            elif not sold.isdigit():
+                self.print_message("Nevalidný vstup", f'Pre položku {good} ste nezadali číselnú hodnotu')
+                continue
+            elif int(sold) > self.temp_amount:
+                self.print_message("Upozornenie", f'Zostávajúci počet kusov v automate z položky {good} je: {self.temp_amount}')
+                continue
+            else:
+                sold = int(sold)
+                while sold != 0:
+                    cost = self.wh_stack[good][0][0]
+                    good_db = "'" + good + "'"
+                    self.machine_content2 = db.refresh_db("predajna_cena", "vending_db." + self.machine, "tovar = " + good_db)
+                    selling_price = self.machine_content2[0][0]
+                    if sold <= self.wh_stack[good][0][2]:
+                        self.aux = self.wh_stack[good][0][2] - sold
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, sold)),
+                                     "pocet_kusov = pocet_kusov - " + str(sold))
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     str((gui.selling_date, good, cost, selling_price, sold, "S")))
+                        if self.aux == 0:
+                            dequeue(self.wh_stack[good])
+                        sold = 0
+                    elif sold > self.wh_stack[good][0][2]:
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, self.wh_stack[good][0][2])),
+                                     "pocet_kusov = pocet_kusov - " + str(self.wh_stack[good][0][2]))
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     str((gui.selling_date, good, cost, selling_price, self.wh_stack[good][0][2], "S")))
+                        sold -= self.wh_stack[good][0][2]
+                        dequeue(self.wh_stack[good])
+
+            storno_widget.destroy()
+        db.remove_from_db("vending_db." + self.machine, "pocet_kusov = 0")
+        self.machine_prices_container = []
+        self.wh_stack = {}
+        self.refresh_machine_state()
+        self.storno_button = tk.Button(self.machine_button_frame, text="Storno tovaru", command=self.open_storno_entries, font="Arial 12 bold", bg="gray26", fg="white")
+        self.storno_button.grid(row=3, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+
+        return self.machine_prices_container
+
+    def open_wh_entries(self):
+        self.machine_frame.grid_configure(ipadx=37)
+        self.move_to_wh_button.destroy()
+        self.sold_goods_button['state'] = tk.DISABLED
+        self.set_price_button['state'] = tk.DISABLED
+        self.add_good_button['state'] = tk.DISABLED
+        self.storno_button['state'] = tk.DISABLED
+        self.filter_button['state'] = tk.DISABLED
+        self.confirm_sold_button = tk.Button(self.machine_button_frame, text="Presunúť do skladu", command=self.send_to_warehouse, font="Arial 12 bold", bg="gray26", fg="green2")
+        self.confirm_sold_button.grid(row=4, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.sold_amount_title = tk.Label(self.machine_frame, text="Počet pre storno", width=15, font="Arial 14", fg="white", bg="gray22")
+        self.sold_amount_title.grid(row=0, column=3, padx=4, pady=4, ipadx=2, sticky="NSWE")
+        self.row_pos = 2
+        for idx, x in enumerate(self.machine_prices_container):
+            good, old_price, price_widget, empty2 = x
+            self.sold_amount_entry = tk.Entry(self.machine_frame, width=10)
+            self.sold_amount_entry.grid(row=self.row_pos + idx, column=3)
+            self.machine_prices_container[idx][3] = self.sold_amount_entry
+
+        return self.machine_prices_container
+
+    def send_to_warehouse(self):
+        self.sold_amount_title.destroy()
+        self.machine_frame.grid_configure(ipadx=128)
+        self.sold_goods_button['state'] = tk.ACTIVE
+        self.set_price_button['state'] = tk.ACTIVE
+        self.add_good_button['state'] = tk.ACTIVE
+        self.storno_button['state'] = tk.ACTIVE
+        self.filter_button['state'] = tk.ACTIVE
+        self.wh_stack = self.load_warehouse("vending_db." + self.machine)
+
+        for idx, x in enumerate(self.machine_prices_container):
+            good, old_price, price_widget, storno_widget = x
+            storno = storno_widget.get()
+            self.temp_amount = sum([self.wh_stack[good][a][2] for a in range(len(self.wh_stack[good]))])
+            if len(storno_widget.get()) == 0:
+                pass
+            elif not storno.isdigit():
+                self.print_message("Nevalidný vstup", f'Pre položku {good} ste nezadali číselnú hodnotu')
+                continue
+            elif int(storno) > self.temp_amount:
+                self.print_message("Upozornenie", f'Zostávajúci počet kusov v automate z položky {good} je: {self.temp_amount}')
+                continue
+            else:
+                storno = int(storno)
+                while storno != 0:
+                    cost = self.wh_stack[good][0][0]
+                    selling_price = self.wh_stack[good][0][1]
+                    good_db = "'" + good + "'"
+                    if storno <= self.wh_stack[good][0][2]:
+                        self.aux = self.wh_stack[good][0][2] - storno
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, storno)),
+                                     "pocet_kusov = pocet_kusov - " + str(storno))
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     str((gui.selling_date, good, cost, selling_price, storno, "S")))
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, storno)),
+                                     "pocet_kusov = pocet_kusov + " + str(storno))
+                        if self.aux == 0:
+                            dequeue(self.wh_stack[good])
+                        storno = 0
+                    elif storno > self.wh_stack[good][0][2]:
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, self.wh_stack[good][0][2])),
+                                     "pocet_kusov = pocet_kusov - " + str(self.wh_stack[good][0][2]))
+                        db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
+                                     str((gui.selling_date, good, cost, selling_price, self.wh_stack[good][0][2], "S")))
+                        db.insert_db('vending_db.sklad', "(tovar, cena_s_dph, pocet_kusov)", str((good, cost, self.wh_stack[good][0][2])),
+                                     "pocet_kusov = pocet_kusov + " + self.wh_stack[good][0][2])
+                        storno -= self.wh_stack[good][0][2]
+                        dequeue(self.wh_stack[good])
+
+            storno_widget.destroy()
+        db.remove_from_db("vending_db." + self.machine, "pocet_kusov = 0")
+        self.machine_prices_container = []
+        self.wh_stack = {}
+        self.refresh_machine_state()
+        self.move_to_wh_button = tk.Button(self.machine_button_frame, text="Automat --> Sklad", command=self.open_wh_entries, font="Arial 12 bold", bg="gray26", fg="white")
+        self.move_to_wh_button.grid(row=4, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+
+        return self.machine_prices_container
 
     def close_machine_top(self):
         self.machine_top.destroy()
