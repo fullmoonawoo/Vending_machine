@@ -420,7 +420,7 @@ class VendingMachine(Abstract):
         self.wh_stack = None
         self.machine_prices_container = []
         self.machine_worth = 0
-        self.aux = 0
+        self.aux_wh = 0
 
         self.machine_prices_check = {}
 
@@ -509,6 +509,7 @@ class VendingMachine(Abstract):
         return self.machine_prices_container, self.machine_prices_check, self.wh_stack
 
     def load_warehouse(self, from_where=None):
+        self.wh = {}
         if from_where:
             self.wh = {}
             self.wh_stocks = db.refresh_db("*", from_where)
@@ -520,10 +521,15 @@ class VendingMachine(Abstract):
                 elif good in self.wh.keys():
                     for y in range(len(self.wh[good])):
                         if self.wh[good][y][0] == cost:
-                            self.wh[good][y][2] += str(amount)
+                            self.aux_wh = y
                             break
-                        else:
-                            enqueue(self.wh[good], [cost, selling_price, amount])
+                        elif self.wh[good][y][0] != cost:
+                            pass
+                    if self.aux_wh:
+                        self.wh[good][self.aux_wh][2] += amount
+                    else:
+                        enqueue(self.wh[good], [cost, selling_price, amount])
+
             return self.wh
         else:
             self.wh_stocks = db.refresh_db("*", "vending_db.sklad")
@@ -535,10 +541,15 @@ class VendingMachine(Abstract):
                 elif good in self.wh.keys():
                     for y in range(len(self.wh[good])):
                         if self.wh[good][y][0] == cost:
-                            self.wh[good][y][1] += amount
+                            self.aux_wh = y
                             break
-                        else:
-                            enqueue(self.wh[good], [cost, amount])
+                        elif self.wh[good][y][0] != cost:
+                            pass
+                    if self.aux_wh:
+                        self.wh[good][self.aux_wh][1] += amount
+                    else:
+                        enqueue(self.wh[good], [cost, amount])
+
             return self.wh
 
     def calculate_machine(self):
@@ -550,6 +561,8 @@ class VendingMachine(Abstract):
 
     def pull_warehouse(self):
         self.wh_good_container = []
+        self.wh_stocks = []
+        self.wh_stack = {}
         self.machine_top = tk.Toplevel(self.workspace, bg="gray22")
         self.machine_top.geometry("840x930")
         self.machine_top.protocol("WM_DELETE_WINDOW", self.close_machine_top)
@@ -564,6 +577,7 @@ class VendingMachine(Abstract):
         self.state_added_lab = tk.Label(self.machine_top, text="Počet kusov", width=10, font="Arial 14", fg="white", bg="gray26")
         self.state_added_lab.grid(row=0, column=2, padx=10, pady=4)
         tk.Button(self.machine_top, text="Potvrdiť", width=30, command=self.move_from_wh, font="Arial 12 bold", bg="gray26", fg="white").grid(row=1, column=4, columnspan=2)
+        self.wh_stack = self.load_warehouse()
         self.wh_stocks = db.refresh_db("tovar", "vending_db.sklad")
         for idx, good in enumerate(set(self.wh_stocks)):
             good = good[0]
@@ -576,19 +590,21 @@ class VendingMachine(Abstract):
             self.state_added_entry.grid(row=idx + 1, column=2)
             self.row_counter = idx + 1
             self.wh_good_container.append((good, self.state_added_entry))
-        return self.wh_good_container
+        return self.wh_good_container, self.wh_stack
 
     @staticmethod
     def print_message(title, body):
         messagebox.showinfo(title, body)
 
     def move_from_wh(self):
+        self.wh_stack = self.load_warehouse()
+        self.temp_amount = 0
         for x in self.wh_good_container:
             good, pull_entry = x
             pulled_amount = pull_entry.get()
             self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
             if len(pulled_amount) == 0:
-                print("Nothing happend")
+                pass
             elif not pulled_amount.isdigit():
                 self.print_message("Nevalidný vstup", f'Pre položku {good} ste nezadali číselnú hodnotu')
                 continue
@@ -647,11 +663,16 @@ class VendingMachine(Abstract):
                             dequeue(self.wh_stack[good])
         db.remove_from_db("vending_db.sklad", "pocet_kusov = 0")
         self.close_machine_top()
+        self.machine_prices_container = []
+        self.wh_stack = {}
         self.refresh_machine_state()
 
     def change_prices(self):
         self.add_good_button['state'] = tk.DISABLED
         self.sold_goods_button['state'] = tk.DISABLED
+        self.storno_button['state'] = tk.DISABLED
+        self.move_to_wh_button['state'] = tk.DISABLED
+        self.filter_button['state'] = tk.DISABLED
         self.set_price_button.destroy()
         self.confirm_price_button = tk.Button(self.machine_button_frame, text="Potvrdiť ceny", command=self.lock_prices, font="Arial 12 bold", bg="gray26", fg="green2")
         self.confirm_price_button.grid(row=2, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
@@ -662,13 +683,15 @@ class VendingMachine(Abstract):
             self.machine_price_entry.grid(row=self.row_pos + idx, column=1, pady=1, padx=1)
             self.machine_price_entry.insert(0, old_price)
             self.machine_prices_container[idx][2] = self.machine_price_entry
-        print(self.machine_prices_container)
 
         return self.machine_prices_container
 
     def lock_prices(self):
         self.add_good_button['state'] = tk.ACTIVE
         self.sold_goods_button['state'] = tk.ACTIVE
+        self.storno_button['state'] = tk.ACTIVE
+        self.move_to_wh_button['state'] = tk.ACTIVE
+        self.filter_button['state'] = tk.ACTIVE
         self.confirm_price_button.destroy()
 
         for idx, x in enumerate(self.machine_prices_container):
@@ -681,6 +704,7 @@ class VendingMachine(Abstract):
 
         self.set_price_button = tk.Button(self.machine_button_frame, text="Nastaviť ceny", command=self.change_prices, font="Arial 12 bold", bg="gray26", fg="white")
         self.set_price_button.grid(row=2, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
+        self.machine_prices_container = []
         self.refresh_machine_state()
 
     def open_sold_entries(self):
@@ -689,6 +713,8 @@ class VendingMachine(Abstract):
         self.set_price_button['state'] = tk.DISABLED
         self.add_good_button['state'] = tk.DISABLED
         self.storno_button['state'] = tk.DISABLED
+        self.move_to_wh_button['state'] = tk.DISABLED
+        self.filter_button['state'] = tk.DISABLED
         self.confirm_sold_button = tk.Button(self.machine_button_frame, text="Potvrdiť predané", command=self.count_sold, font="Arial 12 bold", bg="gray26", fg="green2")
         self.confirm_sold_button.grid(row=1, column=0, padx=40, pady=6, ipadx=110, sticky="WE")
         self.sold_amount_title = tk.Label(self.machine_frame, text="Stav po predaji", width=15, font="Arial 14", fg="white", bg="gray22")
@@ -701,17 +727,21 @@ class VendingMachine(Abstract):
             self.machine_prices_container[idx][3] = self.sold_amount_entry
 
     def count_sold(self):
+        self.wh_stack = {}
         self.sold_amount_title.destroy()
         self.machine_frame.grid_configure(ipadx=128)
         self.set_price_button['state'] = tk.ACTIVE
         self.add_good_button['state'] = tk.ACTIVE
         self.storno_button['state'] = tk.ACTIVE
+        self.move_to_wh_button['state'] = tk.ACTIVE
+        self.filter_button['state'] = tk.ACTIVE
         self.wh_stack = self.load_warehouse("vending_db." + self.machine)
 
         for idx, x in enumerate(self.machine_prices_container):
             good, old_price, price_widget, sold_widget = x
             sold = sold_widget.get()
-            self.temp_amount = sum([self.wh_stack[good][a][1] for a in range(len(self.wh_stack[good]))])
+            print(sold, "Initial sold")
+            self.temp_amount = sum([self.wh_stack[good][a][2] for a in range(len(self.wh_stack[good]))])
             if len(sold_widget.get()) == 0:
                 pass
             elif not sold.isdigit():
@@ -723,12 +753,13 @@ class VendingMachine(Abstract):
             else:
                 sold = int(sold)
                 while sold != 0:
+                    # good_db = "'" + good + "'"
+                    # self.machine_content2 = db.refresh_db("predajna_cena", "vending_db." + self.machine, "tovar = " + good_db)
                     cost = self.wh_stack[good][0][0]
-                    good_db = "'" + good + "'"
-                    self.machine_content2 = db.refresh_db("predajna_cena", "vending_db." + self.machine, "tovar = " + good_db)
-                    selling_price = self.machine_content2[0][0]
-                    if sold <= self.wh_stack[good][0][1]:
-                        self.aux = self.wh_stack[good][0][1] - sold
+                    selling_price = self.wh_stack[good][0][1]
+                    if sold <= self.wh_stack[good][0][2]:
+                        self.aux = self.wh_stack[good][0][2] - sold
+                        print("sold:", sold, "warehouse:", self.wh_stack[good][0][2], "from sold < warehouse")
                         db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, sold)),
                                      "pocet_kusov = pocet_kusov - " + str(sold))
                         db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
@@ -736,12 +767,13 @@ class VendingMachine(Abstract):
                         if self.aux == 0:
                             dequeue(self.wh_stack[good])
                         sold = 0
-                    elif sold > self.wh_stack[good][0][1]:
-                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, self.wh_stack[good][0][1])),
-                                     "pocet_kusov = pocet_kusov - " + str(self.wh_stack[good][0][1]))
+                    elif sold > self.wh_stack[good][0][2]:
+                        print("sold:", sold, "warehouse:", self.wh_stack[good][0][2], "from sold > warehouse")
+                        db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, self.wh_stack[good][0][2])),
+                                     "pocet_kusov = pocet_kusov - " + str(self.wh_stack[good][0][2]))
                         db.insert_db('vending_db.' + self.machine + "_predaje", "(datum, tovar, cena_s_dph, predajna_cena, pocet_kusov, status)",
-                                     str((gui.selling_date, good, cost, selling_price, self.wh_stack[good][0][1], "P")))
-                        sold -= self.wh_stack[good][0][1]
+                                     str((gui.selling_date, good, cost, selling_price, self.wh_stack[good][0][2], "P")))
+                        sold -= self.wh_stack[good][0][2]
                         dequeue(self.wh_stack[good])
 
             sold_widget.destroy()
@@ -877,7 +909,6 @@ class VendingMachine(Abstract):
                 while storno != 0:
                     cost = self.wh_stack[good][0][0]
                     selling_price = self.wh_stack[good][0][1]
-                    good_db = "'" + good + "'"
                     if storno <= self.wh_stack[good][0][2]:
                         self.aux = self.wh_stack[good][0][2] - storno
                         db.insert_db('vending_db.' + self.machine, "(tovar, cena_s_dph, predajna_cena, pocet_kusov)", str((good, cost, selling_price, storno)),
