@@ -4,7 +4,7 @@ import mysql.connector as mysql
 vending_db = mysql.connect(
     host="localhost",
     user="root",
-    password="SLUMerican44",
+    password="password02",
     database="vending_db"
 )
 
